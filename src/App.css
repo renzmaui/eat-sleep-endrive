@@ -1,0 +1,393 @@
+/* =====================================================
+   MISSION 2 THEME: ROAD TRIP / SUNSET
+===================================================== */
+
+body {
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(255, 140, 90, 0.25), transparent 60%),
+    radial-gradient(900px 500px at 80% 10%, rgba(138, 96, 255, 0.18), transparent 60%),
+    linear-gradient(180deg, #fff8f2 0%, #f6efe7 60%, #efe6dd 100%);
+}
+
+/* =====================================================
+   INTRO
+===================================================== */
+
+.intro {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(
+      to bottom,
+      #ffcc80 0%,
+      #ffb79a 35%,
+      #d7a3ff 65%,
+      #9fb8ff 100%
+    );
+}
+
+.intro-title-wrap {
+  position: relative;
+  z-index: 20;
+  text-align: center;
+  white-space: nowrap;
+  padding: 20px;
+}
+
+.intro-title {
+  margin: 0;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: clamp(42px, 8vw, 96px);
+  line-height: 0.88;
+  font-weight: 800;
+  letter-spacing: -0.065em;
+  color: #1a1a1a;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.6);
+}
+
+.intro-chapter {
+  margin-top: 14px;
+  font-family: "Space Mono", monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #222;
+}
+
+.intro-subtitle {
+  margin-top: 7px;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: clamp(20px, 3vw, 34px);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #222;
+}
+
+.begin-btn {
+  position: absolute;
+  z-index: 30;
+  left: 50%;
+  bottom: 6vh;
+  transform: translateX(-50%);
+  padding: 15px 36px;
+  border: 3px solid #111;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff6b6b, #f06595);
+  color: white;
+  box-shadow: 0 6px 0 #111;
+  font-family: "Space Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+.begin-btn:hover {
+  transform: translateX(-50%) translateY(-2px);
+}
+
+.intro::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 40px,
+      rgba(0,0,0,0.06) 40px,
+      rgba(0,0,0,0.06) 42px
+    );
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+/* =====================================================
+   STORY / NAME SCREEN
+===================================================== */
+
+.story {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(
+      to bottom,
+      #ffd7b0 0%,
+      #eec9ff 45%,
+      #c5d9ff 100%
+    );
+}
+
+.story-card {
+  position: relative;
+  z-index: 10;
+  width: min(760px, 90vw);
+  padding: 30px;
+  border: 3px solid #111;
+  border-radius: 28px;
+  background: rgba(255,255,255,0.95);
+  box-shadow: 0 14px 0 #111;
+  text-align: center;
+}
+
+.story-text {
+  margin: 0 auto 20px;
+  max-width: 620px;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: clamp(18px, 3vw, 26px);
+  font-weight: 600;
+  line-height: 1.25;
+  color: #1a1a1a;
+}
+
+.story-btn {
+  padding: 13px 26px;
+  border: 3px solid #111;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6ee7b7, #34d399);
+  color: #0b3b2e;
+  box-shadow: 0 5px 0 #111;
+  font-family: "Space Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.story-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* =====================================================
+   GAME BOX (MG1–4)
+===================================================== */
+
+.game {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.9), transparent 45%),
+    linear-gradient(180deg, #fff7ed 0%, #f8efe6 60%, #efe6dd 100%);
+  overflow: hidden;
+}
+
+.game-box {
+  width: min(1100px, 100%);
+  min-height: min(760px, calc(100vh - 64px));
+  border: 3px solid #111;
+  border-radius: 28px;
+  background: #ffffff;
+  box-shadow: 0 18px 0 #111;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.game-head {
+  padding: 22px 28px 18px;
+  border-bottom: 3px solid #111;
+  text-align: center;
+  background: linear-gradient(180deg, #fff8f0, #fff);
+  flex-shrink: 0;
+}
+
+.game-location {
+  font-family: "Space Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: #555;
+}
+
+.game-head h1 {
+  margin: 5px 0 0;
+  font-size: clamp(28px, 5vw, 54px);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  color: #111;
+}
+
+.game-head p {
+  margin: 7px 0 0;
+  font-family: "Space Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #333;
+}
+
+.game-area {
+  position: relative;
+  flex: 1;
+  min-height: 480px;
+  overflow: hidden;
+  background:
+    radial-gradient(800px 400px at 50% -10%, rgba(255, 180, 120, 0.18), transparent 60%),
+    #fafafa;
+}
+
+.game-message {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  border-top: 3px solid #111;
+  background: #fff;
+  font-family: "Space Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.game-btn {
+  border: 3px solid #111;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f43f5e, #8b5cf6);
+  color: white;
+  padding: 14px 28px;
+  font-family: "Space Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  box-shadow: 0 5px 0 #111;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.game-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 0 #111;
+}
+
+.game-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #111;
+}
+
+/* =====================================================
+   ENDING / RESULT
+===================================================== */
+
+.ending,
+.result {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 30px;
+  text-align: center;
+  background:
+    linear-gradient(
+      to bottom,
+      #ffe7d6 0%,
+      #ead9ff 50%,
+      #d6e4ff 100%
+    );
+}
+
+.ending > div,
+.result > div {
+  max-width: 800px;
+  background: rgba(255,255,255,0.7);
+  border: 3px solid #111;
+  border-radius: 28px;
+  padding: 30px;
+  box-shadow: 0 12px 0 #111;
+}
+
+.ending h1,
+.result h1 {
+  margin: 0;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: clamp(46px, 9vw, 100px);
+  line-height: 0.85;
+  letter-spacing: -0.06em;
+  color: #111;
+}
+
+.ending h2,
+.result h2 {
+  margin: 20px 0 0;
+  font-family: "Space Mono", monospace;
+  color: #222;
+}
+
+.ending p,
+.result p {
+  font-size: 16px;
+  color: #333;
+}
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width: 700px) {
+  .intro-title-wrap {
+    top: 5vh;
+  }
+
+  .intro-title {
+    font-size: 42px;
+  }
+
+  .intro-chapter {
+    font-size: 10px;
+  }
+
+  .intro-subtitle {
+    font-size: 19px;
+  }
+
+  .begin-btn {
+    bottom: 4vh;
+  }
+
+  .story-card {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .story-text {
+    font-size: 17px;
+    margin: 18px auto;
+  }
+
+  .game {
+    padding: 12px;
+  }
+
+  .game-box {
+    min-height: calc(100vh - 24px);
+    border-radius: 20px;
+    box-shadow: 0 10px 0 #111;
+  }
+
+  .game-head {
+    padding: 16px;
+  }
+
+  .game-area {
+    min-height: 420px;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

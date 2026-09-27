@@ -1,0 +1,145 @@
+.seating-content {
+  width: min(900px, 100%);
+  margin: 0 auto;
+  padding: 30px;
+}
+
+.seating-pool {
+  margin-bottom: 30px;
+}
+
+.seating-pool-title {
+  margin: 0 0 16px;
+  color: #555;
+  font-family: "Space Mono", monospace;
+  font-size: 12px;
+  text-align: center;
+}
+
+.seating-enchin-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.seating-enchin-button {
+  padding: 10px 18px;
+  border: 3px solid #111;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #60a5fa, #34d399);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #111;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.seating-enchin-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #111;
+}
+
+.seating-enchin-button.selected {
+  border-color: #f43f5e;
+  background: #f43f5e;
+  box-shadow: 0 6px 0 #111;
+}
+
+.seating-enchin-button.seated {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #666;
+}
+
+.seating-car {
+  padding: 24px;
+  border: 3px solid #111;
+  border-radius: 16px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.1),
+      rgba(15, 23, 42, 0.92)
+    );
+}
+
+.seating-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.seating-seat {
+  display: grid;
+  place-items: center;
+  min-height: 80px;
+  border: 3px dashed rgba(255, 255, 255, 0.35);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.8);
+  color: #fff;
+  cursor: default;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.seating-seat.ready {
+  border-color: #f43f5e;
+  cursor: pointer;
+}
+
+.seating-seat.ready:hover {
+  transform: translateY(-2px);
+  background: rgba(244, 63, 94, 0.18);
+}
+
+.seating-seat.occupied {
+  border-style: solid;
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.seating-seat-label {
+  margin-bottom: 6px;
+  opacity: 0.7;
+  font-family: "Space Mono", monospace;
+  font-size: 10px;
+}
+
+.seating-seat-name {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.seating-seat.occupied .seating-seat-name {
+  color: #fff;
+}
+
+@media (max-width: 600px) {
+  .seating-content {
+    padding: 18px;
+  }
+
+  .seating-grid {
+    gap: 9px;
+  }
+
+  .seating-seat {
+    min-height: 70px;
+  }
+
+  .seating-seat-label {
+    font-size: 8px;
+  }
+
+  .seating-seat-name {
+    font-size: 11px;
+  }
+}

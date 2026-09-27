@@ -2,10 +2,12 @@
 
 :root {
   font-family: "DM Sans", sans-serif;
-  color: #121212;
-  background: #faf8f5;
+  color: #18221f;
+  background: #fffdf7;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
@@ -25,6 +27,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea,
+select {
   font: inherit;
 }

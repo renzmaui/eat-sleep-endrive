@@ -1,0 +1,52 @@
+/* =====================================================
+   ENDING
+===================================================== */
+
+.ending,
+.result {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 30px;
+  background:
+    linear-gradient(
+      to bottom,
+      #ffe7d6 0%,
+      #ead9ff 50%,
+      #d6e4ff 100%
+    );
+  text-align: center;
+}
+
+.ending > div,
+.result > div {
+  max-width: 800px;
+  padding: 30px;
+  border: 3px solid #18221f;
+  border-radius: 28px;
+  background: rgba(255, 253, 247, 0.75);
+  box-shadow: 0 12px 0 #18221f;
+}
+
+.ending h1,
+.result h1 {
+  margin: 0;
+  color: #18221f;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: clamp(46px, 9vw, 100px);
+  line-height: 0.85;
+  letter-spacing: -0.06em;
+}
+
+.ending h2,
+.result h2 {
+  margin: 20px 0 0;
+  color: #222;
+  font-family: "Space Mono", monospace;
+}
+
+.ending p,
+.result p {
+  color: #333;
+  font-size: 16px;
+}

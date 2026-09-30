@@ -42,28 +42,45 @@ export default function MG4Journey({ playerName, enchins, driverScores, onComple
 
   const startTimeline = () => {
     const timeline = [
-      { t: 500, text: `Looks like ${driver.name} is driving!`, type: 'accent' },
+      { t: 500, text: `Looks like ${driver.name} is driving.`, type: 'accent' },
+
       { t: 1200, text: `${driver.name}: "Everyone ready?"`, type: 'enchin' },
       { t: 2000, text: `Someone: "NO."`, type: 'enchin' },
       { t: 2800, text: `${driver.name}: "Too late." 😂`, type: 'enchin' },
+
       { t: 3800, text: '', type: 'neutral' },
       { t: 4200, text: `[ ${driver.name}'S ROAD ]`, type: 'accent' },
+
       { t: 5200, text: '', type: 'neutral' },
       { t: 5800, text: `The island disappears behind you.`, type: 'neutral' },
       { t: 6800, text: `Open road. Sunset. Distant lights.`, type: 'neutral' },
-      { t: 7800, text: `You see strange signs… racing emblems, tire tracks.`, type: 'neutral' },
+
+      { t: 7800, text: `Strange signs… racing emblems, tire tracks.`, type: 'neutral' },
       { t: 8800, text: `A radio crackles: "…all drivers… converge…"`, type: 'neutral' },
+
       { t: 9800, text: '', type: 'neutral' },
-      { t: 10400, text: `You recognize colors from Papa ${driver.papaName}'s world…`, type: 'player' },
-      { t: 11400, text: `but you don't fully understand it yet.`, type: 'player' },
-      { t: 12400, text: '', type: 'neutral' },
-      { t: 13000, text: `The road leads to a huge, dim garage.`, type: 'neutral' },
-      { t: 14000, text: `Under a tarp: a broken race car.`, type: 'neutral' },
-      { t: 15000, text: `${driver.name}: "…This helmet… it's Papa ${driver.papaName}."`, type: 'enchin' },
-      { t: 16200, text: `${driver.name}: "I miss my Papa… Do you miss my Papa too, ${playerName}?"`, type: 'enchin' },
-      { t: 17400, text: `You: "More than anything. We'll bring him back."`, type: 'player' },
-      { t: 18600, text: '', type: 'neutral' },
-      { t: 19200, text: `MISSION 3 — BUILD PAPA'S CAR`, type: 'accent' },
+
+      // Missing dad + realization
+      { t: 10400, text: `${driver.name}: "…I miss my Papa."`, type: 'enchin' },
+      { t: 11400, text: `${driver.name}: "Sometimes I wonder… what if all our Papas are together?"`, type: 'enchin' },
+      { t: 12600, text: `You: "…That’s actually possible."`, type: 'player' },
+
+      { t: 13600, text: '', type: 'neutral' },
+
+      // Garage + helmet + Papa’s room connection
+      { t: 14200, text: `The road leads to a huge, dim garage.`, type: 'neutral' },
+      { t: 15200, text: `Under a tarp: a broken race car.`, type: 'neutral' },
+
+      { t: 16200, text: `${driver.name}: "Wait… that helmet…"`, type: 'enchin' },
+      { t: 17200, text: `${driver.name}: "That’s from Papa’s room. I’ve seen it before."`, type: 'enchin' },
+
+      { t: 18200, text: `You recognize the colors… they match Papa ${driver.papaName}’s stuff.`, type: 'player' },
+
+      { t: 19400, text: `${driver.name}: "If this is Papa’s… maybe he’s not alone out here."`, type: 'enchin' },
+      { t: 20600, text: `${driver.name}: "Maybe all our Papas are somewhere… together."`, type: 'enchin' },
+
+      { t: 21800, text: `You look down the dark road beyond the garage.`, type: 'neutral' },
+      { t: 22400, text: `Something tells you this isn’t the end.`, type: 'accent' },
     ];
 
     let timeouts = [];
@@ -71,7 +88,7 @@ export default function MG4Journey({ playerName, enchins, driverScores, onComple
     timeline.forEach(({ t, text, type }) => {
       const timeout = setTimeout(() => {
         addLog(text, type);
-        if (t === 19200) {
+        if (t === 22400) {
           setShowComplete(true);
         }
       }, t);
@@ -117,24 +134,58 @@ export default function MG4Journey({ playerName, enchins, driverScores, onComple
         <div className="game-area">
           {/* Videos */}
           {(playingIntro || playingFinal) && (
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '20px' }}>
+            <div
+              style={{
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                padding: '20px',
+                minHeight: '200px',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '12px',
+              }}
+            >
               {playingIntro && (
-                <video
-                  ref={introVideoRef}
-                  src={introSrc}
-                  style={{ maxWidth: '100%', maxHeight: '450px' }}
-                  onEnded={handleIntroEnded}
-                  controls={false}
-                />
+                <>
+                  <video
+                    ref={introVideoRef}
+                    src={introSrc}
+                    style={{ maxWidth: '100%', maxHeight: '450px' }}
+                    onEnded={handleIntroEnded}
+                    onError={(e) => {
+                      console.error('Intro video error:', e);
+                      handleIntroEnded(); // skip on error
+                    }}
+                    controls={false}
+                    muted
+                    playsInline
+                  />
+                  <div style={{ color: '#999', fontSize: '12px' }}>
+                    Loading driver reveal…
+                  </div>
+                </>
               )}
+
               {playingFinal && (
-                <video
-                  ref={finalVideoRef}
-                  src={finalSrc}
-                  style={{ maxWidth: '100%', maxHeight: '450px' }}
-                  onEnded={handleFinalEnded}
-                  controls={false}
-                />
+                <>
+                  <video
+                    ref={finalVideoRef}
+                    src={finalSrc}
+                    style={{ maxWidth: '100%', maxHeight: '450px' }}
+                    onEnded={handleFinalEnded}
+                    onError={(e) => {
+                      console.error('Final video error:', e);
+                      handleFinalEnded(); // skip on error
+                    }}
+                    controls={false}
+                    muted
+                    playsInline
+                  />
+                  <div style={{ color: '#999', fontSize: '12px' }}>
+                    Loading {driver.name}’s reveal…
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -190,7 +241,7 @@ export default function MG4Journey({ playerName, enchins, driverScores, onComple
               {showComplete && (
                 <div className="journey-complete">
                   <button className="game-btn" onClick={onComplete} style={{ padding: '14px 28px' }}>
-                    Continue to Mission 3
+                    Keep Going
                   </button>
                 </div>
               )}

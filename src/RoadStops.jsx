@@ -91,7 +91,7 @@ export default function RoadStops({
 
       <header className="road-header">
         <div className="road-eyebrow">
-          EN-DRIVE ROUTE · DAY 01
+          EN-DRIVE ROUTE
         </div>
 
         <h1 className="road-title">

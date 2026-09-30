@@ -1,77 +1,354 @@
-.quiz-content {
-  width: min(700px, 100%);
+/* Scope all Mini-Game 2 styles */
+.mg2-game {
+  width: 100%;
+}
+
+/* Quiz content area */
+.mg2-game .quiz-content {
+  width: min(680px, 100%);
   margin: 0 auto;
-  padding: 30px;
+  padding: 22px 18px;
+  box-sizing: border-box;
   text-align: center;
 }
 
-.quiz-progress-label {
-  margin-bottom: 20px;
+/* Question counter */
+.mg2-game .quiz-progress-label {
+  margin-bottom: 14px;
   color: #666;
   font-family: "Space Mono", monospace;
   font-size: 11px;
+  letter-spacing: 0.05em;
 }
 
-.quiz-question {
-  margin: 0 0 28px;
-  font-size: clamp(18px, 3vw, 24px);
-  line-height: 1.15;
+/* Quiz question */
+.mg2-game .quiz-question {
+  max-width: 600px;
+  margin: 0 auto 24px;
+  font-size: clamp(18px, 2.7vw, 24px);
+  line-height: 1.2;
 }
 
-.quiz-options {
-  display: grid;
-  gap: 12px;
-}
+/*
+  Desktop layout:
 
-.quiz-option {
+  Wonchu   Noxstar   Jakey
+  Snowe    Kishu     Pu-ni
+*/
+.mg2-game .quiz-options {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  grid-template-rows: repeat(2, auto);
+  gap: 20px;
   width: 100%;
-  padding: 14px 20px;
-  border: 3px solid #111;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #60a5fa, #34d399);
-  color: #fff;
-  font-family: "DM Sans", sans-serif;
-  font-size: 14px;
-  font-weight: 700;
-  text-align: left;
-  cursor: pointer;
-  box-shadow: 0 5px 0 #111;
+  max-width: 680px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/*
+  Transparent clickable choice.
+
+  No rectangular background, border, gradient, or shadow.
+*/
+.mg2-game .quiz-options .quiz-option {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 185px !important;
+  min-height: 185px !important;
+  max-height: 185px !important;
+
+  padding: 10px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  outline: none;
+
+  background: transparent !important;
+  color: #111 !important;
+
+  font-family: "DM Sans", sans-serif !important;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  line-height: 1.1 !important;
+  text-align: center !important;
+
+  cursor: pointer !important;
+  box-shadow: none !important;
+
   transition:
     transform 0.15s ease,
-    box-shadow 0.15s ease;
+    filter 0.15s ease;
 }
 
-.quiz-option:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 7px 0 #111;
+/* Flower image used for each answer choice */
+.mg2-game .quiz-options .quiz-option .quiz-option-image {
+  display: block !important;
+
+  width: 135px !important;
+  height: 135px !important;
+  min-width: 135px !important;
+  min-height: 135px !important;
+  max-width: 135px !important;
+  max-height: 135px !important;
+
+  margin: 0 auto 7px !important;
+  object-fit: contain !important;
+
+  pointer-events: none !important;
+  user-select: none !important;
 }
 
-.quiz-option:active {
-  transform: translateY(2px);
-  box-shadow: 0 3px 0 #111;
+/* Enchin name below each flower image */
+.mg2-game .quiz-options .quiz-option .quiz-option-name {
+  display: block !important;
+  width: 100% !important;
+  color: #111 !important;
+  font-size: 17px !important;
+  line-height: 1.1 !important;
+  text-align: center !important;
+  pointer-events: none !important;
 }
 
-.quiz-progress-bar {
-  width: min(500px, 100%);
+/* Hover effect */
+.mg2-game .quiz-options .quiz-option:hover {
+  transform: translateY(-5px) !important;
+  filter: brightness(1.08) !important;
+}
+
+/* Pressed effect */
+.mg2-game .quiz-options .quiz-option:active {
+  transform: translateY(2px) !important;
+}
+
+/* Keyboard focus */
+.mg2-game .quiz-options .quiz-option:focus-visible {
+  outline: 3px dotted #111 !important;
+  outline-offset: 8px !important;
+  border-radius: 50% !important;
+}
+
+/* Progress bar background */
+.mg2-game .quiz-progress-bar {
+  width: min(520px, calc(100% - 36px));
   height: 8px;
+  margin: 0 auto;
   overflow: hidden;
   border-radius: 999px;
   background: #eee;
 }
 
-.quiz-progress-fill {
+/* Progress bar fill */
+.mg2-game .quiz-progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #f43f5e, #8b5cf6);
   transition: width 0.3s ease;
 }
 
+/* Result screen */
+.mg2-game .quiz-result {
+  width: min(500px, 100%);
+  margin: 0 auto;
+  padding: 24px 18px 30px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+/* Larger chosen-driver image */
+.mg2-game .quiz-result-image {
+  display: block !important;
+  width: 500px !important;
+  height: 500px !important;
+  max-width: 500px !important;
+  max-height: 500px !important;
+  margin: 0 auto 18px !important;
+  object-fit: contain !important;
+}
+
+/* Larger result message */
+.mg2-game .quiz-result-message {
+  margin: 0 auto 24px;
+  color: #111;
+  font-family: "DM Sans", sans-serif;
+  font-size: clamp(21px, 4vw, 29px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* Score list */
+.mg2-game .quiz-score-list {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  margin: 0 auto 26px;
+}
+
+/* Individual score row */
+.mg2-game .quiz-score-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+
+  padding: 10px 14px;
+  border: 2px solid #111;
+  border-radius: 12px;
+  background: #fff;
+
+  color: #111;
+  font-family: "DM Sans", sans-serif;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+/* Highlight winning Enchin */
+.mg2-game .quiz-score-row-winner {
+  background: #fef08a;
+  font-weight: 700;
+  box-shadow: 3px 3px 0 #111;
+}
+
+/* Result button container */
+.mg2-game .quiz-result-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+/* Yellow Save Image button */
+.mg2-game .quiz-save-button {
+  padding: 13px 22px;
+  border: 3px solid #111;
+  border-radius: 999px;
+  background: #facc15 !important;
+  color: #111 !important;
+
+  font-family: "DM Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+  box-shadow: 0 4px 0 #111;
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* Save Image hover */
+.mg2-game .quiz-save-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #111;
+}
+
+/* Save Image pressed state */
+.mg2-game .quiz-save-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #111;
+}
+
+/* Green Continue Journey button */
+.mg2-game .quiz-continue-button {
+  margin: 0;
+  padding: 13px 22px;
+  border: 3px solid #111;
+  border-radius: 999px;
+  background: #34d399 !important;
+  color: #111 !important;
+
+  font-family: "DM Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+  box-shadow: 0 4px 0 #111;
+
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* Continue Journey hover */
+.mg2-game .quiz-continue-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #111;
+}
+
+/* Continue Journey pressed state */
+.mg2-game .quiz-continue-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #111;
+}
+
+/* Mobile layout */
 @media (max-width: 600px) {
-  .quiz-content {
-    padding: 20px 16px;
+  .mg2-game .quiz-content {
+    padding: 16px 10px;
   }
 
-  .quiz-option {
-    padding: 13px 15px;
+  /*
+    Mobile layout:
+
+    Wonchu   Noxstar
+    Jakey    Snowe
+    Kishu    Pu-ni
+  */
+  .mg2-game .quiz-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-rows: none;
+    gap: 16px;
+    max-width: 420px;
+  }
+
+  .mg2-game .quiz-options .quiz-option {
+    height: 165px !important;
+    min-height: 165px !important;
+    max-height: 165px !important;
+    padding: 8px !important;
+  }
+
+  .mg2-game .quiz-options .quiz-option .quiz-option-image {
+    width: 115px !important;
+    height: 115px !important;
+    min-width: 115px !important;
+    min-height: 115px !important;
+    max-width: 115px !important;
+    max-height: 115px !important;
+  }
+
+  .mg2-game .quiz-options .quiz-option .quiz-option-name {
+    font-size: 15px !important;
+  }
+
+  .mg2-game .quiz-result-image {
+  width: 240px !important;
+  height: 240px !important;
+  max-width: 240px !important;
+  max-height: 240px !important;
+}
+
+  .mg2-game .quiz-result-message {
+    font-size: 22px;
+  }
+
+  .mg2-game .quiz-score-row {
     font-size: 13px;
+  }
+
+  .mg2-game .quiz-result-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mg2-game .quiz-save-button,
+  .mg2-game .quiz-continue-button {
+    width: min(250px, 100%);
   }
 }

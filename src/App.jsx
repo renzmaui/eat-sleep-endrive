@@ -258,10 +258,8 @@ function NameScreen({ onComplete }) {
             <br />
             What name should we put on the passenger list?
           </div>
-
           <div className="story-speaker">
-            <EnchinGroup />
-            <span>— ENCHINS</span>
+            <span></span>
           </div>
         </div>
 

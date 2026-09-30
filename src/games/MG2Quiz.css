@@ -164,7 +164,7 @@
   width: 500px !important;
   height: 500px !important;
   max-width: 500px !important;
-  max-height: 500px !important;
+  max-height: 300px !important;
   margin: 0 auto 18px !important;
   object-fit: contain !important;
 }

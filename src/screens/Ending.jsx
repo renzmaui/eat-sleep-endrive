@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { byId, img } from '../data';
+import { byId, img, teamHashtag } from '../data';
 import { rankEnchins } from '../lib/scoring';
 import { Btn, Confetti, FanDisclaimer, Icon, SafeImg } from '../components/ui';
 import { renderFinalCard, saveImage, shareText, shareToX } from '../lib/exportImage';
@@ -24,7 +24,7 @@ export default function Ending({ playerName, results, driverId, onReplay, onRepl
     { k: 'Quiz', v: results.mg2?.scores?.[driver.id] || 0 },
     { k: 'Style', v: results.mg3?.scores?.[driver.id] || 0 },
   ];
-  const team = `#Team${driver.papa.replace(/[^A-Za-z]/g, '')}`;
+  const team = teamHashtag(driver);
   const filename = `endrive-chosen-driver-${driver.id}.png`;
 
   const onShare = async () => {

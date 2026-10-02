@@ -45,8 +45,8 @@ export const ENCHINS = [
   {
     id: 'pu-ni',
     name: 'Pu-ni',
-    papa: 'Ni-ki',
-    team: 'Team Ni-ki',
+    papa: 'NI-KI',
+    team: 'Team NI-KI',
     color: '#f4a36f',
     ink: '#86401a',
   },
@@ -55,6 +55,9 @@ export const ENCHINS = [
 export const ENCHIN_IDS = ENCHINS.map((e) => e.id);
 
 export const byId = (id) => ENCHINS.find((e) => e.id === id) || null;
+
+export const teamHashtag = (enchin) =>
+  enchin.id === 'pu-ni' ? '#TeamNI_KI' : `#Team${enchin.papa.replace(/[^A-Za-z]/g, '')}`;
 
 export const img = {
   flower: (id) => `img/${id}-flower.webp`,

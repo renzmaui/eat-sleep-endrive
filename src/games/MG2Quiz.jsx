@@ -1,352 +1,230 @@
-import { useState } from 'react';
-import './MG2Quiz.css';
-
-const ENCHINS = [
-  {
-    id: 'wonchu',
-    name: 'WONCHU',
-    image: '/images/wonchu-flower.png',
-    driverImage: '/images/mg1driver-wonchu.png',
-  },
-  {
-    id: 'noxstar',
-    name: 'NOXSTAR',
-    image: '/images/noxstar-flower.png',
-    driverImage: '/images/mg1driver-noxstar.png',
-  },
-  {
-    id: 'jakey',
-    name: 'JAKEY',
-    image: '/images/jakey-flower.png',
-    driverImage: '/images/mg1driver-jakey.png',
-  },
-  {
-    id: 'snowe',
-    name: 'SNOWE',
-    image: '/images/snowe-flower.png',
-    driverImage: '/images/mg1driver-snowe.png',
-  },
-  {
-    id: 'kishu',
-    name: 'KISHU',
-    image: '/images/kishu-flower.png',
-    driverImage: '/images/mg1driver-kishu.png',
-  },
-  {
-    id: 'puni',
-    name: 'PU-NI',
-    image: '/images/pu-ni-flower.png',
-    driverImage: '/images/mg1driver-pu-ni.png',
-  },
-];
+import { useEffect, useRef, useState } from 'react';
+import { ENCHINS, ENCHIN_IDS, byId, img } from '../data';
+import { Btn, Confetti, Icon, SafeImg } from '../components/ui';
+import { GameHead } from './MG1Seating';
+import { usePersistentState } from '../lib/storage';
+import { emptyScores } from '../lib/scoring';
+import { renderInstaxCard, saveImage } from '../lib/exportImage';
+import { useCard } from '../lib/useCard';
+import { sfx } from '../lib/sound';
 
 const QUESTIONS = [
-  {
-    q: 'Who would take pictures of every pretty view, funny sign, and random cow outside the window?',
-  },
-  {
-    q: 'Before the trip begins, who would study the map so carefully that they know the route, rest stops, and possible detours?',
-  },
-  {
-    q: 'Who would start a car game and invent new rules halfway through when they start losing?',
-  },
-  {
-    q: 'Who would check the weather and traffic before leaving, just in case the road trip suddenly becomes a mission?',
-  },
-  {
-    q: 'Who would lead a dramatic car sing-along while confidently singing the wrong lyrics?',
-  },
-  {
-    q: 'Who would notice that the group is going the wrong way before anyone else?',
-  },
-  {
-    q: 'Who would turn the entire trip into a travel vlog before the car even leaves the driveway?',
-  },
-  {
-    q: 'Who would remain calm during heavy rain and act like they have everything completely under control?',
-  },
-  {
-    q: 'Who would demand a detour every time they spotted an interesting roadside attraction?',
-  },
-  {
-    q: 'Who would remember where the next gas station is, even though nobody asked them to?',
-  },
-  {
-    q: 'Who would control the playlist and skip every song after listening to only three seconds?',
-  },
-  {
-    q: 'Who would read a confusing road sign instead of confidently guessing what it means?',
-  },
-  {
-    q: 'Who would give fake historical facts about every town, building, or cow the car passes?',
-  },
-  {
-    q: 'Who would make sure everyone is ready before the trip starts instead of shouting, “Wait, I forgot something!” after leaving?',
-  },
-  {
-    q: 'Who would become the unofficial photographer and take pictures of everyone while they are not looking?',
-  },
+  'Who would take pictures of every pretty view, funny sign, and random cow outside the window?',
+  'Before the trip begins, who would study the map so carefully that they know the route, rest stops, and possible detours?',
+  'Who would start a car game and invent new rules halfway through when they start losing?',
+  'Who would check the weather and traffic before leaving, just in case the road trip suddenly becomes a mission?',
+  'Who would lead a dramatic car sing-along while confidently singing the wrong lyrics?',
+  'Who would notice that the group is going the wrong way before anyone else?',
+  'Who would turn the entire trip into a travel vlog before the car even leaves the driveway?',
+  'Who would remain calm during heavy rain and act like they have everything completely under control?',
+  'Who would demand a detour every time they spotted an interesting roadside attraction?',
+  'Who would remember where the next gas station is, even though nobody asked them to?',
+  'Who would control the playlist and skip every song after listening to only three seconds?',
+  'Who would read a confusing road sign instead of confidently guessing what it means?',
+  'Who would give fake historical facts about every town, building, or cow the car passes?',
+  'Who would make sure everyone is ready before the trip starts instead of shouting, “Wait, I forgot something!” after leaving?',
+  'Who would become the unofficial photographer and take pictures of everyone while they are not looking?',
 ];
 
-const TIE_BREAKER = {
-  q: 'The GPS stops working, the group misses the exit, and everyone starts panicking. Who would calmly figure out what to do next while everyone else says, “I thought you knew where we were going?”',
-};
+const TIE_BREAKER =
+  'The GPS stops working, the group misses the exit, and everyone starts panicking. Who would calmly figure out what to do next while everyone else says, “I thought you knew where we were going?”';
 
-const INITIAL_SCORES = {
-  wonchu: 0,
-  snowe: 0,
-  jakey: 0,
-  noxstar: 0,
-  puni: 0,
-  kishu: 0,
-};
+function joinNames(ids) {
+  const n = ids.map((id) => byId(id).name);
+  return n.length <= 2 ? n.join(' & ') : `${n.slice(0, -1).join(', ')} & ${n.at(-1)}`;
+}
 
-export default function MG2Quiz({ enchins, onNext }) {
-  const [questionIndex, setQuestionIndex] = useState(0);
-  const [scores, setScores] = useState({ ...INITIAL_SCORES });
-  const [showTieBreaker, setShowTieBreaker] = useState(false);
-  const [result, setResult] = useState(null);
+function tally(answers, tie) {
+  const s = emptyScores();
+  answers.forEach((id) => {
+    if (id in s) s[id] += 1;
+  });
+  if (tie && tie in s) s[tie] += 1;
+  return s;
+}
 
-  const getEnchin = (enchinId) => {
-    const localEnchin = ENCHINS.find(
-      (enchin) => enchin.id === enchinId,
-    );
+function topIds(scores) {
+  const max = Math.max(...Object.values(scores));
+  return ENCHIN_IDS.filter((id) => scores[id] === max);
+}
 
-    const parentEnchin = enchins?.find(
-      (enchin) => enchin.id === enchinId,
-    );
+export default function MG2Quiz({ playerName, onComplete }) {
+  const [draft, setDraft] = usePersistentState(
+    'draft:mg2',
+    { answers: [], tie: null },
+    (v) => ({
+      answers: Array.isArray(v.answers) ? v.answers.filter((a) => ENCHIN_IDS.includes(a)).slice(0, QUESTIONS.length) : [],
+      tie: ENCHIN_IDS.includes(v.tie) ? v.tie : null,
+    }),
+  );
+  const { answers, tie } = draft;
+  const [picked, setPicked] = useState(null);
+  const lock = useRef(false);
 
-    return {
-      ...localEnchin,
-      ...parentEnchin,
-      id: enchinId,
-      name: localEnchin?.name || parentEnchin?.name,
-      image: localEnchin?.image || parentEnchin?.image,
-      driverImage: localEnchin?.driverImage,
-    };
+  const base = tally(answers, null);
+  const allAnswered = answers.length >= QUESTIONS.length;
+  const tiedIds = allAnswered ? topIds(base) : [];
+  const needsTie = allAnswered && tiedIds.length > 1 && !tie;
+  const finished = allAnswered && (tiedIds.length === 1 || !!tie);
+
+  const qIndex = Math.min(answers.length, QUESTIONS.length - 1);
+  const question = needsTie ? TIE_BREAKER : QUESTIONS[qIndex];
+  const options = needsTie ? ENCHINS.filter((e) => tiedIds.includes(e.id)) : ENCHINS;
+
+  useEffect(() => setPicked(null), [answers.length, needsTie]);
+
+  const answer = (id) => {
+    if (lock.current) return;
+    lock.current = true;
+    setPicked(id);
+    sfx.pop();
+    window.setTimeout(() => {
+      setDraft((d) => (needsTie ? { ...d, tie: id } : { ...d, answers: [...d.answers, id].slice(0, QUESTIONS.length) }));
+      lock.current = false;
+    }, 380);
   };
 
-  const calculateResult = (finalScores, tieBreakerId = null) => {
-    const highestScore = Math.max(...Object.values(finalScores));
-
-    const tiedWinners = Object.entries(finalScores)
-      .filter(([, score]) => score === highestScore)
-      .map(([id]) => id);
-
-    const winnerId =
-      tieBreakerId && tiedWinners.includes(tieBreakerId)
-        ? tieBreakerId
-        : tiedWinners[0];
-
-    return {
-      winnerId,
-      chosenDriver: getEnchin(winnerId),
-      finalScores,
-    };
+  const back = () => {
+    if (lock.current) return;
+    sfx.back();
+    setDraft((d) => (d.tie ? { ...d, tie: null } : { answers: d.answers.slice(0, -1), tie: null }));
   };
 
-  const finishQuiz = (finalScores, tieBreakerId = null) => {
-    const quizResult = calculateResult(finalScores, tieBreakerId);
-    setResult(quizResult);
-  };
-
-  const handleAnswer = (enchinId) => {
-    const updatedScores = {
-      ...scores,
-      [enchinId]: scores[enchinId] + 1,
-    };
-
-    setScores(updatedScores);
-
-    const isLastQuestion =
-      questionIndex === QUESTIONS.length - 1;
-
-    if (!isLastQuestion) {
-      setQuestionIndex((currentIndex) => currentIndex + 1);
-      return;
-    }
-
-    const highestScore = Math.max(...Object.values(updatedScores));
-
-    const numberOfLeaders = Object.values(updatedScores).filter(
-      (score) => score === highestScore,
-    ).length;
-
-    if (numberOfLeaders > 1) {
-      setShowTieBreaker(true);
-    } else {
-      finishQuiz(updatedScores);
-    }
-  };
-
-  const handleTieBreaker = (enchinId) => {
-    const finalScores = {
-      ...scores,
-      [enchinId]: scores[enchinId] + 1,
-    };
-
-    finishQuiz(finalScores, enchinId);
-  };
-
-  const saveResultImage = () => {
-    if (!result?.chosenDriver?.driverImage) {
-      return;
-    }
-
-    const link = document.createElement('a');
-
-    link.href = result.chosenDriver.driverImage;
-    link.download = `${result.chosenDriver.id}-chosen-driver.png`;
-
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const continueJourney = () => {
-    onNext({
-      scores: result.finalScores,
-      driverId: result.winnerId,
-      chosenDriver: result.chosenDriver,
-    });
-  };
-
-  /*
-    Final result screen.
-    The repeated title and driver name have been removed.
-  */
-  if (result) {
+  if (finished) {
+    const scores = tally(answers, tie);
+    const winnerId = tie && tiedIds.includes(tie) ? tie : topIds(scores)[0];
     return (
-      <section className="game mg2-game">
-        <div className="game-box">
-          <div className="game-area">
-            <div className="quiz-result">
-              <img
-                src={result.chosenDriver.driverImage}
-                alt={`${result.chosenDriver.name} as the chosen driver`}
-                className="quiz-result-image"
-              />
-
-              <p className="quiz-result-message">
-                Looks like {result.chosenDriver.name} is driving!
-              </p>
-
-              <div className="quiz-score-list">
-                {ENCHINS.map((enchin) => (
-                  <div
-                    key={enchin.id}
-                    className={`quiz-score-row ${
-                      enchin.id === result.winnerId
-                        ? 'quiz-score-row-winner'
-                        : ''
-                    }`}
-                  >
-                    <span>{enchin.name}</span>
-
-                    <span>
-                      {result.finalScores[enchin.id]} vote
-                      {result.finalScores[enchin.id] === 1
-                        ? ''
-                        : 's'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="quiz-result-actions">
-                <button
-                  type="button"
-                  className="quiz-save-button"
-                  onClick={saveResultImage}
-                >
-                  Save Image
-                </button>
-
-                <button
-                  type="button"
-                  className="quiz-continue-button"
-                  onClick={continueJourney}
-                >
-                  Continue Journey
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <QuizResult
+        playerName={playerName}
+        scores={scores}
+        winnerId={winnerId}
+        onRetake={() => {
+          sfx.whoosh();
+          setDraft({ answers: [], tie: null });
+        }}
+        onBack={back}
+        onContinue={() => onComplete({ answers, tie, winnerId, scores })}
+      />
     );
   }
 
-  const currentQuestion = showTieBreaker
-    ? TIE_BREAKER
-    : QUESTIONS[questionIndex];
-
-  const progress = showTieBreaker
-    ? 100
-    : ((questionIndex + 1) / QUESTIONS.length) * 100;
+  const progress = needsTie ? 1 : answers.length / QUESTIONS.length;
 
   return (
-    <section className="game mg2-game">
-      <div className="game-box">
-        <div className="game-head">
-          <div className="game-location">
-            ROAD TRIP QUIZ
-          </div>
+    <section className="page game-page mg2">
+      <GameHead num="02" place="Bus Stop" title="Who would do it?" sub="Pick the Enchin who fits each road-trip moment best. Go with your gut." />
 
-          <h1>Who Would Do It on the Road Trip?</h1>
-
-          <p>
-            Choose the Enchin who best fits each road-trip moment.
-          </p>
+      <div className="quiz-card" key={needsTie ? 'tie' : answers.length}>
+        <div className="quiz-meta">
+          <span className={`quiz-count ${needsTie ? 'is-tie' : ''}`}>{needsTie ? 'TIE-BREAKER!' : `QUESTION ${answers.length + 1} / ${QUESTIONS.length}`}</span>
+          <span className="quiz-track" aria-hidden="true">
+            <span style={{ transform: `scaleX(${progress})` }} />
+          </span>
         </div>
+        {needsTie && <p className="tie-note">It’s a tie between {joinNames(tiedIds)}. One last question…</p>}
+        <h2 className="quiz-q">{question}</h2>
 
-        <div className="game-area">
-          <div className="quiz-content">
-            <div className="quiz-progress-label">
-              {showTieBreaker
-                ? 'FINAL TIE-BREAKER'
-                : `QUESTION ${questionIndex + 1} OF ${QUESTIONS.length}`}
-            </div>
-
-            <h2 className="quiz-question">
-              {currentQuestion.q}
-            </h2>
-
-            <div className="quiz-options">
-              {ENCHINS.map((enchin) => (
-                <button
-                  key={enchin.id}
-                  type="button"
-                  className="quiz-option"
-                  onClick={() =>
-                    showTieBreaker
-                      ? handleTieBreaker(enchin.id)
-                      : handleAnswer(enchin.id)
-                  }
-                  aria-label={`Choose ${enchin.name}`}
-                >
-                  <img
-                    src={enchin.image}
-                    alt={enchin.name}
-                    className="quiz-option-image"
-                  />
-
-                  <span className="quiz-option-name">
-                    {enchin.name}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
+        <div className={`quiz-options n${options.length}`}>
+          {options.map((e) => (
+            <button
+              key={e.id}
+              type="button"
+              className={`quiz-opt ${picked === e.id ? 'is-picked' : ''} ${picked && picked !== e.id ? 'is-dim' : ''}`}
+              style={{ '--c': e.color }}
+              onClick={() => answer(e.id)}
+              onPointerEnter={() => sfx.hover()}
+              disabled={!!picked}
+              aria-label={`Choose ${e.name}`}
+            >
+              <SafeImg src={img.flower(e.id)} alt="" enchinId={e.id} />
+              <span>{e.name}</span>
+            </button>
+          ))}
         </div>
+      </div>
 
-        <div className="game-message">
-          <div className="quiz-progress-bar">
-            <div
-              className="quiz-progress-fill"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+      <div className="action-bar">
+        <div className="action-buttons spread">
+          <Btn variant="ghost" onClick={back} disabled={answers.length === 0 && !tie} sound={null}>
+            <Icon.back /> Previous
+          </Btn>
+          <span className="quiz-dots" aria-hidden="true">
+            {QUESTIONS.map((_, i) => (
+              <i key={i} className={i < answers.length ? 'is-done' : i === answers.length ? 'is-now' : ''} />
+            ))}
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function QuizResult({ playerName, scores, winnerId, onRetake, onBack, onContinue }) {
+  const winner = byId(winnerId);
+  const max = Math.max(1, ...Object.values(scores));
+  const [leaving, setLeaving] = useState(false);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => sfx.fanfare(), []);
+  const sorted = [...ENCHINS].sort((a, b) => scores[b.id] - scores[a.id]);
+  const photo = useCard(() => renderInstaxCard({ kind: 'mg2', enchinId: winner.id, playerName }), [winner.id, playerName]);
+
+  return (
+    <section className="page game-page mg2 result-page">
+      <Confetti />
+      <GameHead num="02" place="Bus Stop" title={`The quiz picks ${winner.name}!`} sub={`${playerName ? `${playerName}, y` : 'Y'}our answers point to one very capable Enchin.`} />
+
+      <div className="result-grid">
+        <figure className="polaroid tilt-l">
+          <SafeImg src={img.driver(winner.id)} alt={`${winner.name} as the chosen driver`} enchinId={winner.id} />
+          <figcaption>Looks like {winner.name} could be driving…</figcaption>
+        </figure>
+        <div className="vote-board">
+          <span className="sb-label">QUIZ VOTES · +1 POINT EACH</span>
+          <ul>
+            {sorted.map((e) => (
+              <li key={e.id} className={e.id === winnerId ? 'is-winner' : ''} style={{ '--c': e.color }}>
+                <SafeImg src={img.flower(e.id)} alt="" enchinId={e.id} />
+                <span className="vb-name">{e.name}</span>
+                <span className="vb-bar">
+                  <span style={{ width: `${(scores[e.id] / max) * 100}%` }} />
+                </span>
+                <strong>{scores[e.id]}</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <div className="action-bar">
+        <div className="action-buttons wrap">
+          <Btn variant="ghost" onClick={onBack} sound={null}>
+            <Icon.back /> Change last answer
+          </Btn>
+          <Btn variant="ghost" onClick={onRetake} sound={null}>
+            <Icon.restart /> Retake quiz
+          </Btn>
+          <Btn
+            variant="soft"
+            disabled={saving}
+            onClick={async () => {
+              setSaving(true);
+              await saveImage(photo ? { blob: photo.blob, filename: `endrive-mg2-${winner.id}.png` } : { url: img.driverPng(winner.id), filename: `${winner.id}-chosen-driver.png` });
+              setSaving(false);
+            }}
+          >
+            <Icon.save /> {saving ? 'Saving…' : 'Save photo'}
+          </Btn>
+          <Btn
+            variant="primary"
+            sound="points"
+            disabled={leaving}
+            onClick={() => {
+              setLeaving(true);
+              onContinue();
+            }}
+          >
+            Continue journey <Icon.arrow />
+          </Btn>
         </div>
       </div>
     </section>

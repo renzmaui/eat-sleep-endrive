@@ -1,4 +1,4 @@
-﻿node_modules/
-dist/
-.vercel/
-.vercel
+node_modules
+dist
+original-src
+.DS_Store

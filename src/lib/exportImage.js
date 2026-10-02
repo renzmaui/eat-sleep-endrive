@@ -1,4 +1,4 @@
-import { byId, img } from '../data';
+import { byId, img, teamHashtag } from '../data';
 
 function loadImage(src) {
   return new Promise((resolve) => {
@@ -647,10 +647,7 @@ export async function renderFinalCard({ driverId, playerName, ranked }) {
   ctx.textAlign = 'center';
   ctx.fillStyle = INK;
   ctx.font = '700 20px "Space Mono", monospace';
-  const team = e.id === 'pu-ni'
-    ? '#TeamNI_KI'
-    : `#Team${e.papa.replace(/[^A-Za-z]/g, '')}`;
-  ctx.fillText(`${team}  #EMGP2026  #MAMA2026  #ENHYPEN  #ENGENE`, W / 2, H - 66);
+  ctx.fillText(`${teamHashtag(e)}  #EMGP2026  #MAMA2026  #ENHYPEN  #ENGENE`, W / 2, H - 66);
   ctx.fillText('#ENHYPENMAMAGRANDPRIX2026  #ROADTOENHYPENDAESANG', W / 2, H - 36);
   return canvas;
 }
@@ -658,9 +655,7 @@ export async function renderFinalCard({ driverId, playerName, ranked }) {
 /** Text for the X / Twitter post. */
 export function shareText(driverId) {
   const e = byId(driverId);
-  const team = e.id === 'pu-ni'
-    ? '#TeamNI_KI'
-    : `#Team${e.papa.replace(/[^A-Za-z]/g, '')}`;
+  const team = teamHashtag(e);
   return `My Mission 2 chosen driver is ${e.name}! I guess I'm gonna be a part of ${team}\n\n#EMGP2026 #MAMA2026 #ENHYPEN #ENGENE #ENHYPENMAMAGRANDPRIX2026 #ROADTOENHYPENDAESANG`;
 }
 

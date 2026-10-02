@@ -1,459 +1,351 @@
-import { useState } from "react";
-import "./App.css";
+import { Component, useCallback, useEffect, useRef, useState } from 'react';
+import './styles/app.css';
 
-import MG1Seating from "./games/MG1Seating";
-import MG2Quiz from "./games/MG2Quiz";
-import MG3Customize from "./games/MG3Customize";
-import MG4Journey from "./games/MG4Journey";
-import RoadStops from "./RoadStops";
+import { ENCHIN_IDS, byId } from './data';
+import { clearAll, remove, usePersistentState } from './lib/storage';
+import { cleanScores, leaderInfo, rankEnchins } from './lib/scoring';
+import { setMusicEnabled, setSfxEnabled, setTrack, setVolume, sfx } from './lib/sound';
 
-const ENCHINS = [
-  { id: "wonchu", name: "WONCHU", papaName: "Jungwon" },
-  { id: "noxstar", name: "NOXSTAR", papaName: "Jay" },
-  { id: "jakey", name: "JAKEY", papaName: "Jake" },
-  { id: "snowe", name: "SNOWE", papaName: "Sunghoon" },
-  { id: "kishu", name: "KISHU", papaName: "Sunoo" },
-  { id: "puni", name: "PU-NI", papaName: "Ni-ki" },
-];
+import Sidebar from './components/Sidebar';
+import { Btn, Modal } from './components/ui';
+import Intro from './screens/Intro';
+import NameScreen, { cleanName } from './screens/NameScreen';
+import RoadStops from './screens/RoadStops';
+import Ending from './screens/Ending';
+import MG1Seating from './games/MG1Seating';
+import MG2Quiz from './games/MG2Quiz';
+import MG3Customize from './games/MG3Customize';
+import MG4Journey from './games/MG4Journey';
 
-function EnchinGroup() {
-  return (
-    <div className="story-enchin-group" aria-hidden="true">
-      <img
-        className="story-enchin-image story-enchin-puni"
-        src="/images/intro-pu-ni.png"
-        alt=""
-      />
+const GAME_IDS = ['mg1', 'mg2', 'mg3'];
+const STEPS = ['intro', 'name', 'stops', 'mg1', 'mg2', 'mg3', 'mg4', 'ending'];
 
-      <img
-        className="story-enchin-image story-enchin-noxstar"
-        src="/images/intro-noxstar.png"
-        alt=""
-      />
+const FRESH = { step: 'intro', playerName: '', results: {}, gain: null };
 
-      <img
-        className="story-enchin-image story-enchin-wonchu"
-        src="/images/intro-wonchu.png"
-        alt=""
-      />
-
-      <img
-        className="story-enchin-image story-enchin-kishu"
-        src="/images/intro-kishu.png"
-        alt=""
-      />
-
-      <img
-        className="story-enchin-image story-enchin-snowe"
-        src="/images/intro-snowe.png"
-        alt=""
-      />
-
-      <img
-        className="story-enchin-image story-enchin-jakey"
-        src="/images/intro-jakey.png"
-        alt=""
-      />
-    </div>
-  );
-}
-
-function Guardrail({ prefix = "" }) {
-  return (
-    <div className={`${prefix}road-guardrail`}>
-      <div className={`${prefix}guardrail-beam`} />
-
-      <div className={`${prefix}guardrail-post ${prefix}post-1`} />
-      <div className={`${prefix}guardrail-post ${prefix}post-2`} />
-      <div className={`${prefix}guardrail-post ${prefix}post-3`} />
-      <div className={`${prefix}guardrail-post ${prefix}post-4`} />
-      <div className={`${prefix}guardrail-post ${prefix}post-5`} />
-      <div className={`${prefix}guardrail-post ${prefix}post-6`} />
-      <div className={`${prefix}guardrail-post ${prefix}post-7`} />
-      <div className={`${prefix}guardrail-post ${prefix}post-8`} />
-    </div>
-  );
-}
-
-function RoadScene({ prefix = "" }) {
-  return (
-    <div className={`${prefix}road`} aria-hidden="true">
-      <Guardrail prefix={prefix} />
-
-      <div className={`${prefix}road-line ${prefix}road-line-1`} />
-      <div className={`${prefix}road-line ${prefix}road-line-2`} />
-      <div className={`${prefix}road-line ${prefix}road-line-3`} />
-    </div>
-  );
-}
-
-function SeaScene({ prefix = "" }) {
-  return (
-    <div className={`${prefix}sea`} aria-hidden="true">
-      <div className={`${prefix}sea-horizon`} />
-      <div className={`${prefix}sea-glint ${prefix}sea-glint-1`} />
-      <div className={`${prefix}sea-glint ${prefix}sea-glint-2`} />
-      <div className={`${prefix}sea-glint ${prefix}sea-glint-3`} />
-    </div>
-  );
-}
-
-function VehicleScene({ prefix = "" }) {
-  return (
-    <div className={`${prefix}vehicle-scene`} aria-hidden="true">
-      <div className={`${prefix}vehicle-shadow`} />
-
-      <img
-        className={`${prefix}vehicle-image`}
-        src="/images/intro-vehicle.png"
-        alt=""
-      />
-
-      <div className={`${prefix}enchin-line`}>
-        <img
-          className={`${prefix}enchin ${prefix}enchin-puni`}
-          src="/images/intro-pu-ni.png"
-          alt=""
-        />
-
-        <img
-          className={`${prefix}enchin ${prefix}enchin-noxstar`}
-          src="/images/intro-noxstar.png"
-          alt=""
-        />
-
-        <img
-          className={`${prefix}enchin ${prefix}enchin-wonchu`}
-          src="/images/intro-wonchu.png"
-          alt=""
-        />
-
-        <img
-          className={`${prefix}enchin ${prefix}enchin-kishu`}
-          src="/images/intro-kishu.png"
-          alt=""
-        />
-
-        <img
-          className={`${prefix}enchin ${prefix}enchin-snowe`}
-          src="/images/intro-snowe.png"
-          alt=""
-        />
-
-        <img
-          className={`${prefix}enchin ${prefix}enchin-jakey`}
-          src="/images/intro-jakey.png"
-          alt=""
-        />
-      </div>
-    </div>
-  );
-}
-
-function IntroBackground() {
-  return (
-    <>
-      <div className="intro-sky-glow" aria-hidden="true" />
-      <div className="intro-stars" aria-hidden="true" />
-      <div className="intro-clouds" aria-hidden="true" />
-
-      <div className="intro-cloud cloud-left" aria-hidden="true" />
-      <div className="intro-cloud cloud-right" aria-hidden="true" />
-
-      <SeaScene prefix="intro-" />
-      <RoadScene prefix="intro-" />
-    </>
-  );
-}
-
-function Intro({ onBegin }) {
-  return (
-    <section className="intro">
-      <IntroBackground />
-
-      <div className="intro-content">
-        <div className="intro-eyebrow">
-          AFTER THE SIX KEYS...
-        </div>
-
-        <h1 className="intro-title">
-          Eat, Sleep...
-          <span>EN-Drive</span>
-        </h1>
-
-        <div className="intro-divider" aria-hidden="true">
-          <span />
-          <b>✦</b>
-          <span />
-        </div>
-
-        <p className="intro-subtitle">
-          THE ROAD TRIP BEGINS
-        </p>
-      </div>
-
-      <div className="intro-bottom">
-        <div className="intro-location">
-          <span className="location-dot" aria-hidden="true" />
-          <span>LEAVING THE ISLAND</span>
-
-          <span className="location-arrow" aria-hidden="true">
-            →
-          </span>
-
-          <span>CITY UNKNOWN</span>
-        </div>
-
-        <button className="begin-btn" onClick={onBegin}>
-          START THE JOURNEY
-
-          <span className="begin-arrow" aria-hidden="true">
-            →
-          </span>
-        </button>
-
-        <div className="intro-hint">
-          WHO WILL END UP DRIVING?
-        </div>
-
-        <VehicleScene prefix="intro-" />
-      </div>
-    </section>
-  );
-}
-
-function NameScreen({ onComplete }) {
-  const [name, setName] = useState("");
-
-  function submitName() {
-    const trimmedName = name.trim();
-
-    if (trimmedName) {
-      onComplete(trimmedName);
-    }
-  }
-
-  return (
-    <section className="story">
-      <div className="story-background" aria-hidden="true">
-        <div className="story-sky-glow" />
-        <div className="story-stars" />
-
-        <div className="story-clouds" />
-        <div className="story-cloud story-cloud-left" />
-        <div className="story-cloud story-cloud-right" />
-
-        <SeaScene prefix="story-" />
-        <RoadScene prefix="story-" />
-      </div>
-
-      <VehicleScene prefix="story-" />
-
-      <div className="story-card">
-        <div className="story-text">
-          <div>
-            The island is behind us.
-            <br />
-            The trip is ahead of us.
-            <br />
-            What name should we put on the passenger list?
-          </div>
-          <div className="story-speaker">
-            <span></span>
-          </div>
-        </div>
-
-        <input
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Your name"
-          aria-label="Your name"
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              submitName();
-            }
-          }}
-        />
-
-        <button
-          className="story-btn"
-          disabled={!name.trim()}
-          onClick={submitName}
-        >
-          LET&apos;S GO!
-        </button>
-      </div>
-    </section>
-  );
-}
-
-function Ending({ onRestart }) {
-  return (
-    <section className="ending">
-      <div>
-        <h1>MISSION 2 COMPLETE</h1>
-
-        <p>
-          You hit the road and uncovered a secret from Papa’s past.
-        </p>
-
-        <h2>NEXT: BUILD PAPA’S CAR</h2>
-
-        <button className="game-btn" onClick={onRestart}>
-          REPLAY
-        </button>
-      </div>
-    </section>
-  );
+function repairState(v) {
+  const playerName = cleanName(v?.playerName);
+  const results = {};
+  GAME_IDS.forEach((id) => {
+    const r = v?.results?.[id];
+    if (r && typeof r === 'object') results[id] = { ...r, scores: cleanScores(r.scores) };
+  });
+  if (v?.results?.mg4 && ENCHIN_IDS.includes(v.results.mg4.driverId)) results.mg4 = { driverId: v.results.mg4.driverId };
+  let step = STEPS.includes(v?.step) ? v.step : 'intro';
+  const all3 = GAME_IDS.every((id) => results[id]);
+  if (!playerName && step !== 'intro') step = 'name';
+  if (GAME_IDS.includes(step) && results[step]) step = 'stops';
+  if (step === 'mg4' && !all3) step = 'stops';
+  if (step === 'ending' && !results.mg4) step = all3 ? 'mg4' : 'stops';
+  return { step, playerName, results, gain: null };
 }
 
 export default function App() {
-  const [step, setStep] = useState("intro");
-  const [playerName, setPlayerName] = useState("");
+  const [game, setGame] = usePersistentState('app', FRESH, repairState);
+  const [settings, setSettings] = usePersistentState('settings', { music: true, sfx: true, volume: 0.8 }, (v) => ({
+    music: v.music !== false,
+    sfx: v.sfx !== false,
+    volume: Number.isFinite(Number(v.volume)) ? Math.max(0, Math.min(1, Number(v.volume))) : 0.8,
+  }));
+  // A reload always lands on the title screen (it also unlocks audio with a tap),
+  // then "Continue" jumps back to wherever the player was.
+  const [booted, setBooted] = useState(false);
+  const [confirmRestart, setConfirmRestart] = useState(false);
+  const [redoId, setRedoId] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [storyKey, setStoryKey] = useState(0);
+  const mainRef = useRef(null);
 
-  const [completedGames, setCompletedGames] = useState({
-    mg1: false,
-    mg2: false,
-    mg3: false,
-  });
+  const { step, playerName, results } = game;
+  const all3 = GAME_IDS.every((id) => results[id]);
+  const view = booted ? step : 'intro';
 
-  const [driverScores, setDriverScores] = useState(
-    Object.fromEntries(
-      ENCHINS.map((enchin) => [enchin.id, 0])
-    )
+  /* ---------------- sound settings ---------------- */
+  useEffect(() => setMusicEnabled(settings.music), [settings.music]);
+  useEffect(() => setSfxEnabled(settings.sfx), [settings.sfx]);
+  useEffect(() => setVolume(settings.volume), [settings.volume]);
+  useEffect(() => {
+    // The uploaded song plays continuously on the route map and mini games 1–3,
+    // and stops once the journey (mini game 4) begins.
+    if (['stops', 'mg1', 'mg2', 'mg3'].includes(view)) setTrack('song');
+    else if (view === 'mg4') setTrack(null);
+    else setTrack('road');
+  }, [view]);
+
+  /* ---------------- navigation ---------------- */
+  const go = useCallback(
+    (target) => {
+      setGame((g) => {
+        const done3 = GAME_IDS.every((id) => g.results[id]);
+        let t = target;
+        if (!g.playerName && !['intro', 'name'].includes(t)) t = 'name';
+        if (GAME_IDS.includes(t) && g.results[t]) t = 'stops';
+        if (t === 'mg4' && !done3) t = 'stops';
+        if (t === 'ending' && !g.results.mg4) t = 'stops';
+        return g.step === t ? g : { ...g, step: t };
+      });
+    },
+    [setGame],
   );
 
-  function beginIntro() {
-    setStep("name");
-  }
+  // scroll to top on every screen change
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+    mainRef.current?.scrollTo?.({ top: 0 });
+  }, [view]);
 
-  function completeName(name) {
-    setPlayerName(name);
+  // Browser/phone back button: from a mini-game, go back to the route map instead of leaving the site.
+  const stepRef = useRef(view);
+  stepRef.current = view;
+  useEffect(() => {
+    if (['mg1', 'mg2', 'mg3', 'mg4'].includes(view)) window.history.pushState({ endrive: view }, '');
+  }, [view]);
+  useEffect(() => {
+    const onPop = () => {
+      if (['mg1', 'mg2', 'mg3', 'mg4'].includes(stepRef.current)) {
+        sfx.back();
+        go('stops');
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [go]);
 
-    setCompletedGames({
-      mg1: false,
-      mg2: false,
-      mg3: false,
+  /* ---------------- game flow ---------------- */
+  const completing = useRef(false);
+  const completeGame = (id, payload) => {
+    if (completing.current) return;
+    completing.current = true;
+    window.setTimeout(() => (completing.current = false), 800);
+    const scores = cleanScores(payload?.scores);
+    setGame((g) => {
+      if (g.results[id]) return { ...g, step: 'stops' }; // already counted — never double-score
+      return {
+        ...g,
+        step: 'stops',
+        results: { ...g.results, [id]: { ...payload, scores } },
+        gain: { key: Date.now(), id, scores },
+      };
     });
+    remove(`draft:${id}`);
+    const gains = ENCHIN_IDS.filter((e) => scores[e] > 0).map((e) => `${byId(e).name} +${scores[e]}`);
+    setToast({ key: Date.now(), title: 'Stop complete!', text: gains.join(' · ') || 'Points added.' });
+    window.setTimeout(() => sfx.points(), 250);
+  };
 
-    setStep("stops");
+  const redo = (id) => {
+    setRedoId(null);
+    remove(`draft:${id}`);
+    setGame((g) => {
+      const next = { ...g.results };
+      delete next[id];
+      return { ...g, results: next, step: id, gain: null };
+    });
+  };
+
+  const restart = () => {
+    setConfirmRestart(false);
+    clearAll();
+    setSettings((s) => ({ ...s }));
+    setGame({ ...FRESH });
+    setBooted(false);
+    setToast(null);
+    sfx.whoosh();
+  };
+
+  useEffect(() => {
+    if (view !== 'stops') setToast(null);
+  }, [view]);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const t = window.setTimeout(() => setToast(null), 3800);
+    return () => window.clearTimeout(t);
+  }, [toast]);
+
+  const driverId = results.mg4?.driverId || rankEnchins(results)[0]?.id;
+
+  /* ---------------- screens ---------------- */
+  const toggleMusic = () => {
+    setSettings((s) => ({ ...s, music: !s.music }));
+    sfx.tap();
+  };
+  const toggleSfx = () => {
+    setSettings((s) => ({ ...s, sfx: !s.sfx }));
+    window.setTimeout(() => sfx.tap(), 30);
+  };
+
+  const restartModal = (
+    <Modal
+      open={confirmRestart}
+      title="Start the whole trip over?"
+      tone="warn"
+      onClose={() => setConfirmRestart(false)}
+      actions={
+        <>
+          <Btn variant="ghost" onClick={() => setConfirmRestart(false)} data-autofocus>
+            Keep playing
+          </Btn>
+          <Btn variant="danger" onClick={restart} sound={null}>
+            Yes, start over
+          </Btn>
+        </>
+      }
+    >
+      <p>This clears your name, every stop and all driver points. It can’t be undone.</p>
+    </Modal>
+  );
+
+  if (view === 'intro') {
+    const hasSave = !!playerName && step !== 'intro';
+    return (
+      <>
+        <Intro
+          hasSave={hasSave}
+          savedName={playerName}
+          music={settings.music}
+          onToggleMusic={toggleMusic}
+          onBegin={() => {
+            setBooted(true);
+            go(playerName ? 'stops' : 'name');
+          }}
+          onContinue={() => setBooted(true)}
+          onNewGame={() => setConfirmRestart(true)}
+        />
+        {restartModal}
+      </>
+    );
   }
 
-  function addScores(scoreDeltas) {
-    setDriverScores((previousScores) => {
-      const updatedScores = { ...previousScores };
+  if (view === 'name') {
+    return (
+      <NameScreen
+        onBack={() => {
+          setBooted(false);
+          setGame((g) => ({ ...g, step: 'intro' }));
+        }}
+        onComplete={(name) => setGame((g) => ({ ...g, playerName: name, step: 'stops' }))}
+      />
+    );
+  }
 
-      Object.entries(scoreDeltas || {}).forEach(
-        ([enchinId, delta]) => {
-          if (typeof delta !== "number") {
-            return;
-          }
+  let screen = null;
+  if (view === 'stops') screen = <RoadStops results={results} playerName={playerName} onSelect={go} onRedo={(id) => setRedoId(id)} />;
+  if (view === 'mg1') screen = <MG1Seating playerName={playerName} onComplete={(p) => completeGame('mg1', p)} />;
+  if (view === 'mg2') screen = <MG2Quiz playerName={playerName} onComplete={(p) => completeGame('mg2', p)} />;
+  if (view === 'mg3') screen = <MG3Customize playerName={playerName} onComplete={(p) => completeGame('mg3', p)} />;
+  if (view === 'mg4' && all3)
+    screen = (
+      <MG4Journey
+        key={storyKey}
+        playerName={playerName}
+        driverId={driverId}
+        results={results}
+        onComplete={() => setGame((g) => ({ ...g, results: { ...g.results, mg4: { driverId } }, step: 'ending' }))}
+      />
+    );
+  if (view === 'ending')
+    screen = (
+      <Ending
+        playerName={playerName}
+        results={results}
+        driverId={driverId}
+        onReplay={() => setConfirmRestart(true)}
+        onReplayStory={() => {
+          setStoryKey((k) => k + 1);
+          setGame((g) => ({ ...g, step: 'mg4' }));
+        }}
+      />
+    );
 
-          updatedScores[enchinId] =
-            (updatedScores[enchinId] || 0) + delta;
+  const leader = leaderInfo(results);
+
+  return (
+    <div className={`shell view-${view}`}>
+      <Sidebar
+        playerName={playerName}
+        results={results}
+        step={view}
+        gain={game.gain}
+        onNavigate={(t) => {
+          sfx.tap();
+          go(t);
+        }}
+        onRestart={() => setConfirmRestart(true)}
+        music={settings.music}
+        sfxOn={settings.sfx}
+        onToggleMusic={toggleMusic}
+        onToggleSfx={toggleSfx}
+        volume={settings.volume}
+        onVolume={(v) => setSettings((st) => ({ ...st, volume: v }))}
+      />
+      <main className="main" ref={mainRef} key={view}>
+        {screen || (
+          <div className="page">
+            <p>Hmm, that road is closed.</p>
+            <Btn onClick={() => go('stops')}>Back to the route</Btn>
+          </div>
+        )}
+      </main>
+
+      {toast && (
+        <div className="toast" key={toast.key} role="status">
+          <strong>{toast.title}</strong>
+          <span>{toast.text}</span>
+          {leader.leaderId && <em>{leader.tiedIds.length > 1 ? `${byId(leader.leaderId).name} leads on the tie-break!` : `${byId(leader.leaderId).name} is leading!`}</em>}
+        </div>
+      )}
+
+      <Modal
+        open={!!redoId}
+        title="Redo this stop?"
+        onClose={() => setRedoId(null)}
+        actions={
+          <>
+            <Btn variant="ghost" onClick={() => setRedoId(null)} data-autofocus>
+              Never mind
+            </Btn>
+            <Btn variant="primary" onClick={() => redo(redoId)}>
+              Redo it
+            </Btn>
+          </>
         }
-      );
-
-      return updatedScores;
-    });
-  }
-
-function completeMiniGame(gameId, scoreDeltas) {
-  addScores(scoreDeltas);
-
-  setCompletedGames((previousGames) => ({
-    ...previousGames,
-    [gameId]: true,
-  }));
-
-  setStep("stops");
+      >
+        <p>Your points from this stop will be removed and replaced by your new answers. Points from other stops stay safe.</p>
+      </Modal>
+      {restartModal}
+    </div>
+  );
 }
 
-  function restartMission() {
-    setStep("intro");
-    setPlayerName("");
-
-    setCompletedGames({
-      mg1: false,
-      mg2: false,
-      mg3: false,
-    });
-
-    setDriverScores(
-      Object.fromEntries(
-        ENCHINS.map((enchin) => [enchin.id, 0])
-      )
-    );
+/* ---------------- Crash guard ---------------- */
+export class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
   }
-
-  if (step === "intro") {
-    return <Intro onBegin={beginIntro} />;
+  static getDerivedStateFromError(error) {
+    return { error };
   }
-
-  if (step === "name") {
-    return <NameScreen onComplete={completeName} />;
+  componentDidCatch(error) {
+    console.error(error);
   }
-
-  if (step === "stops") {
+  render() {
+    if (!this.state.error) return this.props.children;
     return (
-      <RoadStops
-        completedGames={completedGames}
-        onSelectGame={(gameId) => setStep(gameId)}
-      />
+      <div className="crash">
+        <div className="modal">
+          <h2 className="modal-title">Oops, we hit a pothole.</h2>
+          <p>Something went wrong. Your progress is saved, so reloading usually fixes it.</p>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-ghost" onClick={() => { clearAll(); window.location.reload(); }}>
+              Reset game
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => window.location.reload()}>
+              Reload
+            </button>
+          </div>
+        </div>
+      </div>
     );
   }
-
-  if (step === "mg1") {
-    return (
-      <MG1Seating
-        playerName={playerName}
-        enchins={ENCHINS}
-        onNext={(scores) => {
-          completeMiniGame("mg1", scores);
-        }}
-      />
-    );
-  }
-
-  if (step === "mg2") {
-    return (
-      <MG2Quiz
-        playerName={playerName}
-        enchins={ENCHINS}
-        onNext={(scores) => {
-          completeMiniGame("mg2", scores);
-        }}
-      />
-    );
-  }
-
-  if (step === "mg3") {
-    return (
-      <MG3Customize
-        playerName={playerName}
-        enchins={ENCHINS}
-        onNext={(scores) => {
-          completeMiniGame("mg3", scores);
-        }}
-      />
-    );
-  }
-
-  if (step === "mg4") {
-    return (
-      <MG4Journey
-        playerName={playerName}
-        enchins={ENCHINS}
-        driverScores={driverScores}
-        onComplete={() => setStep("ending")}
-      />
-    );
-  }
-
-  if (step === "ending") {
-    return <Ending onRestart={restartMission} />;
-  }
-
-  return null;
 }

@@ -1,264 +1,307 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ENCHINS, byId, img, video } from '../data';
+import { Btn, Icon, SafeImg } from '../components/ui';
+import Cutscene from '../components/Cutscene';
+import { GameHead, SEATS } from './MG1Seating';
+import { Scenery } from '../screens/Intro';
+import { setTrack, sfx } from '../lib/sound';
 
-export default function MG4Journey({ playerName, enchins, driverScores, onComplete }) {
-  const [log, setLog] = useState([]);
-  const [started, setStarted] = useState(false);
-  const [showComplete, setShowComplete] = useState(false);
-
-  // Video state
-  const [playingIntro, setPlayingIntro] = useState(false);
-  const [playingFinal, setPlayingFinal] = useState(false);
-
-  const introVideoRef = useRef(null);
-  const finalVideoRef = useRef(null);
-
-  const best = Object.entries(driverScores).sort((a, b) => b[1] - a[1])[0]?.[0] || 'wonchu';
-  const driver = enchins.find((e) => e.id === best);
-
-  const addLog = (text, type = 'neutral') => {
-    setLog((prev) => [...prev, { text, type }]);
+function pickCast(driver, results) {
+  const seating = results?.mg1?.seating || {};
+  const used = new Set([driver.id]);
+  const take = (...ids) => {
+    const id = ids.find((x) => x && !used.has(x)) || ENCHINS.find((e) => !used.has(e.id)).id;
+    used.add(id);
+    return byId(id);
   };
+  // Passenger princess = whoever sat in seat 2 (if they ended up driving, the seat-1 Enchin swaps over).
+  const princess = take(seating.seat2, seating.seat1);
+  const middle = take(seating.seat3, seating.seat4);
+  const o1 = take(seating.seat4, seating.seat5, seating.seat6);
+  const o2 = take(seating.seat5, seating.seat6, seating.seat3);
+  const seatOf = (e) => Object.keys(seating).find((k) => seating[k] === e.id);
+  const roleOf = (e, fallback) => SEATS.find((x) => x.id === seatOf(e))?.label || fallback;
+  return { princess, middle, o1, o2, midRole: roleOf(middle, 'Middle Seat') };
+}
 
-  // Start journey + intro video
-  const handleStart = () => {
-    setStarted(true);
-    setPlayingIntro(true);
-    // intro video will auto-play via ref effect
-  };
+function buildStory(driver, playerName, results) {
+  const { princess, middle, o1, o2, midRole } = pickCast(driver, results);
+  const you = playerName || 'You';
+  const PP = 'Passenger Princess';
+  const MID = midRole;
+  return [
+    { t: 'title', text: `Looks like ${driver.name} is driving!`, scene: 'road' },
+    { t: 'driver', text: 'Everyone ready?', scene: 'road' },
+    { t: 'other', who: princess, role: PP, text: 'NO.', scene: 'road' },
+    { t: 'driver', text: 'Too late. Seatbelts on!', scene: 'road' },
+    { t: 'chapter', text: `${driver.name.toUpperCase()}’S ROAD`, scene: 'road' },
+    { t: 'narr', text: 'The island disappears behind you.', scene: 'road' },
+    { t: 'narr', text: 'Open road. Sunset. Distant city lights.', scene: 'road' },
+    { t: 'driver', text: 'ENCHIN… do you think there’s a high chance our Papas are together?', scene: 'road' },
+    { t: 'other', who: o1, text: 'I thought of that too!', scene: 'road' },
+    { t: 'other', who: o2, text: 'Me too!', scene: 'road' },
+    { t: 'you', text: '…That’s actually possible.', scene: 'road' },
+    { t: 'narr', text: 'Then… strange signs start appearing. Racing emblems. Checkered flags. Fresh tire tracks.', scene: 'signs' },
+    { t: 'narr', text: 'A radio crackles to life: “…all drivers… converge…”', scene: 'signs' },
+    { t: 'other', who: princess, role: PP, text: 'Why does the stuff around here look like Papa’s stuff? That’s the color of his shirts!', scene: 'signs' },
+    { t: 'other', who: middle, role: MID, text: 'Wait, for real! That looks like the logo of the company Papa is working at…', scene: 'signs' },
+    { t: 'narr', text: 'You follow the signs, turn after turn, until the road runs out.', scene: 'signs' },
+    { t: 'narr', text: 'The road ends at a huge, dim garage.', scene: 'garage' },
+    { t: 'driver', text: 'Dead end? We should go down.', scene: 'garage' },
+    { t: 'narr', text: 'Under a dusty tarp: a broken E1 race car.', scene: 'garage-reveal' },
+    { t: 'driver', text: 'Wait… that car… this helmet…', scene: 'garage-reveal' },
+    { t: 'driver', text: `This helmet… it’s Papa ${driver.papa}’s. I’ve seen it in his room.`, scene: 'garage-reveal' },
+    { t: 'driver', text: '…I really, really miss my Papa…', scene: 'garage-reveal' },
+    { t: 'you', text: 'You’ll meet him soon.', scene: 'garage-reveal' },
+    { t: 'title', text: 'Something tells you this isn’t the end…', scene: 'garage-reveal' },
+  ].map((l) => ({ ...l, you }));
+}
 
-  // When intro video ends, play final driver video
-  const handleIntroEnded = () => {
-    setPlayingIntro(false);
-    setPlayingFinal(true);
-    // final video will auto-play via ref effect
-  };
-
-  // When final driver video ends, start the text timeline
-  const handleFinalEnded = () => {
-    setPlayingFinal(false);
-    // Now kick off the timeline
-    startTimeline();
-  };
-
-  const startTimeline = () => {
-    const timeline = [
-      { t: 500, text: `Looks like ${driver.name} is driving.`, type: 'accent' },
-
-      { t: 1200, text: `${driver.name}: "Everyone ready?"`, type: 'enchin' },
-      { t: 2000, text: `Someone: "NO."`, type: 'enchin' },
-      { t: 2800, text: `${driver.name}: "Too late." 😂`, type: 'enchin' },
-
-      { t: 3800, text: '', type: 'neutral' },
-      { t: 4200, text: `[ ${driver.name}'S ROAD ]`, type: 'accent' },
-
-      { t: 5200, text: '', type: 'neutral' },
-      { t: 5800, text: `The island disappears behind you.`, type: 'neutral' },
-      { t: 6800, text: `Open road. Sunset. Distant lights.`, type: 'neutral' },
-
-      { t: 7800, text: `Strange signs… racing emblems, tire tracks.`, type: 'neutral' },
-      { t: 8800, text: `A radio crackles: "…all drivers… converge…"`, type: 'neutral' },
-
-      { t: 9800, text: '', type: 'neutral' },
-
-      // Missing dad + realization
-      { t: 10400, text: `${driver.name}: "…I miss my Papa."`, type: 'enchin' },
-      { t: 11400, text: `${driver.name}: "Sometimes I wonder… what if all our Papas are together?"`, type: 'enchin' },
-      { t: 12600, text: `You: "…That’s actually possible."`, type: 'player' },
-
-      { t: 13600, text: '', type: 'neutral' },
-
-      // Garage + helmet + Papa’s room connection
-      { t: 14200, text: `The road leads to a huge, dim garage.`, type: 'neutral' },
-      { t: 15200, text: `Under a tarp: a broken race car.`, type: 'neutral' },
-
-      { t: 16200, text: `${driver.name}: "Wait… that helmet…"`, type: 'enchin' },
-      { t: 17200, text: `${driver.name}: "That’s from Papa’s room. I’ve seen it before."`, type: 'enchin' },
-
-      { t: 18200, text: `You recognize the colors… they match Papa ${driver.papaName}’s stuff.`, type: 'player' },
-
-      { t: 19400, text: `${driver.name}: "If this is Papa’s… maybe he’s not alone out here."`, type: 'enchin' },
-      { t: 20600, text: `${driver.name}: "Maybe all our Papas are somewhere… together."`, type: 'enchin' },
-
-      { t: 21800, text: `You look down the dark road beyond the garage.`, type: 'neutral' },
-      { t: 22400, text: `Something tells you this isn’t the end.`, type: 'accent' },
-    ];
-
-    let timeouts = [];
-
-    timeline.forEach(({ t, text, type }) => {
-      const timeout = setTimeout(() => {
-        addLog(text, type);
-        if (t === 22400) {
-          setShowComplete(true);
-        }
-      }, t);
-      timeouts.push(timeout);
-    });
-
-    return () => timeouts.forEach(clearTimeout);
-  };
-
-  // Auto-play videos when their "playing" state becomes true
-  useEffect(() => {
-    if (playingIntro && introVideoRef.current) {
-      introVideoRef.current.currentTime = 0;
-      introVideoRef.current.play().catch(() => {
-        // In case autoplay is blocked, you can show a "click to play" fallback if needed
-      });
-    }
-  }, [playingIntro]);
+export default function MG4Journey({ playerName, driverId, results, onComplete }) {
+  const driver = byId(driverId) || ENCHINS[0];
+  const [phase, setPhase] = useState('ready'); // ready | reveal | final | story | cliff
 
   useEffect(() => {
-    if (playingFinal && finalVideoRef.current) {
-      finalVideoRef.current.currentTime = 0;
-      finalVideoRef.current.play().catch(() => {
-        // same as above
-      });
-    }
-  }, [playingFinal]);
+    if (phase === 'story' || phase === 'cliff') setTrack('story');
+    return undefined;
+  }, [phase]);
 
-  if (!driver) return null;
+  if (phase === 'reveal') {
+    return (
+      <section className="page game-page mg4" key={phase}>
+        <GameHead num="04" place="The Journey" title="Who’s taking the wheel?" sub="Adding up every seat, vote and style pick…" />
+        <Cutscene
+          key="reveal"
+          src={video.driverReveal.src}
+          poster={video.driverReveal.poster}
+          fallbackImage={img.carTop}
+          label="Driver reveal"
+          onEnd={() => {
+            sfx.suspense();
+            setPhase('final');
+          }}
+        />
+      </section>
+    );
+  }
 
-  const introSrc = '/images/driver-reveal.mp4';
-  const finalSrc = `/images/${driver.id}-final-driver.mp4`; // e.g. wonchu-final-driver.mp4
+  if (phase === 'final') {
+    const v = video.finalDriver(driver.id);
+    return (
+      <section className="page game-page mg4" key={phase}>
+        <GameHead num="04" place="The Journey" title={`${driver.name} is driving!`} sub="Your potential driver is officially behind the wheel." />
+        <Cutscene
+          key={`final-${driver.id}`}
+          src={v.src}
+          poster={v.poster}
+          missing={v.missing}
+          fallbackImage={img.driver(driver.id)}
+          fallbackAlt={`${driver.name} in the driver seat`}
+          label={`${driver.name} takes the wheel`}
+          onEnd={() => {
+            sfx.fanfare();
+            setPhase('story');
+          }}
+        />
+      </section>
+    );
+  }
+
+  if (phase === 'story') {
+    return <Story driver={driver} playerName={playerName} results={results} onDone={() => setPhase('cliff')} />;
+  }
+
+  if (phase === 'cliff') {
+    return (
+      <section className="page game-page mg4 cliff">
+        <div className="cliff-card">
+          <div className="cliff-car">
+            <SafeImg src={img.car(driver.id)} alt={`Papa ${driver.papa}’s broken race car`} />
+          </div>
+          <p className="eyebrow light">TO BE CONTINUED</p>
+          <h1 className="cliff-title">
+            <span>THE E1 GARAGE</span>
+            The race isn’t over…
+          </h1>
+          <p className="cliff-wait">…wait. What do you mean, <em>race</em>?</p>
+          <p className="cliff-sub">
+            {driver.name} and the crew found Papa {driver.papa}’s broken E1 race car. Whatever happens next, ENHYPEN is out there somewhere…
+          </p>
+          <div className="action-buttons center">
+            <Btn variant="ghost-light" onClick={() => setPhase('story')} sound={null}>
+              <Icon.restart /> Read again
+            </Btn>
+            <Btn variant="primary" size="lg" sound="fanfare" onClick={onComplete}>
+              Mission 2 : The Chosen Enchin Driver <Icon.arrow />
+            </Btn>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="game">
-      <div className="game-box">
-        <div className="game-head">
-          <div className="game-location">HIT THE ROAD</div>
-          <h1>{driver.name}'S ROAD</h1>
-          <p>The journey begins.</p>
+    <section className="page game-page mg4" key={phase}>
+      <GameHead num="04" place="The Journey" title="The Journey" sub="All three stops cleared. The crew is packed. The engine is warm." />
+      <div className="ready-card">
+        <div className="ready-crew">
+          {ENCHINS.map((e, i) => (
+            <SafeImg key={e.id} src={img.flower(e.id)} alt="" enchinId={e.id} style={{ '--i': i }} />
+          ))}
         </div>
+        <h2>Ready to find out who’s driving?</h2>
+        <p>Grab a snack. This part is a story, just sit back and read. Videos can be skipped anytime.</p>
+        <Btn
+          variant="primary"
+          size="lg"
+          sound={null}
+          onClick={() => {
+            sfx.engine();
+            window.setTimeout(() => sfx.honk(), 600);
+            setPhase('reveal');
+          }}
+        >
+          Start the journey <Icon.arrow />
+        </Btn>
+      </div>
+    </section>
+  );
+}
 
-        <div className="game-area">
-          {/* Videos */}
-          {(playingIntro || playingFinal) && (
-            <div
-              style={{
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'center',
-                padding: '20px',
-                minHeight: '200px',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '12px',
-              }}
-            >
-              {playingIntro && (
-                <>
-                  <video
-                    ref={introVideoRef}
-                    src={introSrc}
-                    style={{ maxWidth: '100%', maxHeight: '450px' }}
-                    onEnded={handleIntroEnded}
-                    onError={(e) => {
-                      console.error('Intro video error:', e);
-                      handleIntroEnded(); // skip on error
-                    }}
-                    controls={false}
-                    muted
-                    playsInline
-                  />
-                  <div style={{ color: '#999', fontSize: '12px' }}>
-                    Loading driver reveal…
-                  </div>
-                </>
-              )}
+/* ---------------- Auto-playing story ---------------- */
+function Story({ driver, playerName, results, onDone }) {
+  const lines = useMemo(() => buildStory(driver, playerName, results), [driver, playerName, results]);
+  const [shown, setShown] = useState(1);
+  const [fast, setFast] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const logRef = useRef(null);
+  const done = shown >= lines.length;
+  const scene = lines[Math.min(shown, lines.length) - 1].scene;
 
-              {playingFinal && (
-                <>
-                  <video
-                    ref={finalVideoRef}
-                    src={finalSrc}
-                    style={{ maxWidth: '100%', maxHeight: '450px' }}
-                    onEnded={handleFinalEnded}
-                    onError={(e) => {
-                      console.error('Final video error:', e);
-                      handleFinalEnded(); // skip on error
-                    }}
-                    controls={false}
-                    muted
-                    playsInline
-                  />
-                  <div style={{ color: '#999', fontSize: '12px' }}>
-                    Loading {driver.name}’s reveal…
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+  useEffect(() => {
+    if (done || paused) return undefined;
+    const line = lines[shown - 1];
+    const base = 1300 + line.text.length * 38;
+    const t = window.setTimeout(() => setShown((n) => Math.min(lines.length, n + 1)), fast ? base * 0.45 : base);
+    return () => window.clearTimeout(t);
+  }, [shown, fast, paused, done, lines]);
 
-          {/* Journey text */}
-          {!playingIntro && !playingFinal && (
-            <div
-              className="journey-content"
-              style={{
-                padding: '30px',
-                maxWidth: '800px',
-                margin: '0 auto',
-                maxHeight: '450px',
-                overflow: 'auto',
-              }}
-            >
-              {!started && (
-                <div className="journey-start">
-                  <button
-                    className="game-btn"
-                    onClick={handleStart}
-                    style={{ padding: '16px 32px', fontSize: '14px' }}
-                  >
-                    Start Journey
-                  </button>
-                </div>
-              )}
+  useEffect(() => {
+    const l = lines[shown - 1];
+    if (!l) return;
+    if (l.t === 'title' || l.t === 'chapter') sfx.sparkle();
+    else sfx.blip();
+    const el = logRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  }, [shown, lines]);
 
-              {log.map((line, i) => (
-                <div
-                  key={i}
-                  className={`journey-line ${line.type}`}
-                  style={{
-                    marginBottom: '10px',
-                    color:
-                      line.type === 'enchin'
-                        ? '#fca5a5'
-                        : line.type === 'player'
-                        ? '#93c5fd'
-                        : line.type === 'accent'
-                        ? '#f43f5e'
-                        : '#e2e8f0',
-                    fontFamily: line.type === 'accent' ? 'Space Mono' : 'DM Sans',
-                    fontWeight: line.type === 'accent' ? '700' : '400',
-                    fontSize: line.type === 'accent' ? '16px' : '15px',
-                    animation: 'fadeIn 0.4s ease',
-                  }}
-                >
-                  {line.text}
-                </div>
-              ))}
+  useEffect(() => {
+    if (scene === 'garage-reveal') sfx.whoosh();
+    if (scene === 'signs') sfx.honk();
+  }, [scene]);
 
-              {showComplete && (
-                <div className="journey-complete">
-                  <button className="game-btn" onClick={onComplete} style={{ padding: '14px 28px' }}>
-                    Keep Going
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+  const nextLine = () => {
+    if (!done) setShown((n) => Math.min(lines.length, n + 1));
+  };
+
+  return (
+    <section className="page game-page mg4 story-page">
+      <div className={`story-scene scene-${scene}`} aria-hidden="true">
+        <Scenery night />
+        <div className="scene-van">
+          <SafeImg src={img.vehicle} alt="" />
         </div>
+        <div className="scene-signs">
+          <span className="sign s1">E1</span>
+          <span className="sign s2 checker" />
+          <span className="sign s3">→</span>
+        </div>
+        <div className="scene-garage">
+          <div className="garage-door" />
+          <div className="garage-light" />
+          <div className="garage-car">
+            <SafeImg src={img.car(driver.id)} alt="" />
+            <span className="tarp" />
+          </div>
+        </div>
+      </div>
 
-        <div className="game-message">
-          <span className="journey-status" style={{ fontSize: '12px', color: '#666' }}>
-            {started
-              ? playingIntro
-                ? 'Playing driver reveal…'
-                : playingFinal
-                ? `Playing ${driver.name}'s reveal…`
-                : 'Journey in progress...'
-              : 'Click Start Journey'}
-          </span>
+      <div className="story-log" ref={logRef} onClick={nextLine} role="log" aria-live="polite">
+        {lines.slice(0, shown).map((l, i) => {
+          const speaker = l.t === 'driver' ? driver : l.t === 'other' ? l.who : null;
+          if (l.t === 'chapter')
+            return (
+              <div key={i} className="line line-chapter">
+                <span>{l.text}</span>
+              </div>
+            );
+          if (l.t === 'title')
+            return (
+              <div key={i} className="line line-title">
+                {l.text}
+              </div>
+            );
+          if (l.t === 'narr')
+            return (
+              <p key={i} className="line line-narr">
+                {l.text}
+              </p>
+            );
+          if (l.t === 'you')
+            return (
+              <div key={i} className="line line-bubble is-you">
+                <div className="bubble">
+                  <small>{l.you}</small>
+                  {l.text}
+                </div>
+                <span className="avatar you-avatar">{(l.you || 'Y').slice(0, 1).toUpperCase()}</span>
+              </div>
+            );
+          return (
+            <div key={i} className="line line-bubble" style={{ '--c': speaker.color }}>
+              <span className="avatar">
+                <SafeImg src={img.flower(speaker.id)} alt="" enchinId={speaker.id} />
+              </span>
+              <div className="bubble">
+                <small>
+                  {speaker.name}
+                  {l.role ? ` · ${l.role}` : l.t === 'driver' ? ' · Driver' : ''}
+                </small>
+                {l.text}
+              </div>
+            </div>
+          );
+        })}
+        {!done && (
+          <div className="typing" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </div>
+        )}
+      </div>
+
+      <div className="action-bar dark">
+        <p className="action-hint">{done ? 'The road ends here… for now.' : 'Tap the story to read faster.'}</p>
+        <div className="action-buttons">
+          {!done && (
+            <>
+              <Btn variant="ghost-light" onClick={() => setPaused((p) => !p)} sound="tap">
+                {paused ? 'Resume' : 'Pause'}
+              </Btn>
+              <Btn variant="ghost-light" onClick={() => setFast((f) => !f)} aria-pressed={fast}>
+                {fast ? 'Normal speed' : 'Faster'}
+              </Btn>
+              <Btn variant="ghost-light" onClick={() => setShown(lines.length)}>
+                Show all
+              </Btn>
+            </>
+          )}
+          {done && (
+            <Btn variant="primary" size="lg" sound="suspense" onClick={onDone}>
+              Keep going <Icon.arrow />
+            </Btn>
+          )}
         </div>
       </div>
     </section>

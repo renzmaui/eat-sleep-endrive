@@ -1,457 +1,283 @@
-import { useState } from 'react';
-import './MG3Customize.css';
+import { useEffect, useState } from 'react';
+import { ENCHINS, ENCHIN_IDS, byId, img } from '../data';
+import { Btn, Confetti, Icon, SafeImg } from '../components/ui';
+import { GameHead } from './MG1Seating';
+import { usePersistentState } from '../lib/storage';
+import { emptyScores } from '../lib/scoring';
+import { sfx } from '../lib/sound';
+import { renderInstaxCard, saveImage } from '../lib/exportImage';
+import { useCard } from '../lib/useCard';
 
-const ENCHINS = [
-  {
-    id: 'wonchu',
-    name: 'Wonchu',
-    carName: 'Mercedes',
-    papa: 'Jungwon',
-    carImage: '/images/wonchu-car.png',
-    waterImage: '/images/wonchu-water.png',
-    shirtImage: '/images/wonchu-shirt.png',
-    capImage: '/images/wonchu-cap.png',
-    driverImage: '/images/mg1driver-wonchu.png',
-    color: '#f48fb1',
-    fallback: '♡',
-  },
-  {
-    id: 'noxstar',
-    name: 'Noxstar',
-    carName: 'Red Bull Racing',
-    papa: 'Jay',
-    carImage: '/images/noxstar-car.png',
-    waterImage: '/images/noxstar-water.png',
-    shirtImage: '/images/noxstar-shirt.png',
-    capImage: '/images/noxstar-cap.png',
-    driverImage: '/images/mg1driver-noxstar.png',
-    color: '#9b87f5',
-    fallback: '✦',
-  },
-  {
-    id: 'jakey',
-    name: 'Jakey',
-    carName: 'McLaren',
-    papa: 'Jake',
-    carImage: '/images/jakey-car.png',
-    waterImage: '/images/jakey-water.png',
-    shirtImage: '/images/jakey-shirt.png',
-    capImage: '/images/jakey-cap.png',
-    driverImage: '/images/mg1driver-jakey.png',
-    color: '#f8cf63',
-    fallback: '★',
-  },
-  {
-    id: 'snowe',
-    name: 'Snowe',
-    carName: 'Ferrari',
-    papa: 'Sunghoon',
-    carImage: '/images/snowe-car.png',
-    waterImage: '/images/snowe-water.png',
-    shirtImage: '/images/snowe-shirt.png',
-    capImage: '/images/snowe-cap.png',
-    driverImage: '/images/mg1driver-snowe.png',
-    color: '#8ed8ef',
-    fallback: '☁',
-  },
-  {
-    id: 'kishu',
-    name: 'Kishu',
-    carName: 'Alpine',
-    papa: 'Sunoo',
-    carImage: '/images/kishu-car.png',
-    waterImage: '/images/kishu-water.png',
-    shirtImage: '/images/kishu-shirt.png',
-    capImage: '/images/kishu-cap.png',
-    driverImage: '/images/mg1driver-kishu.png',
-    color: '#8ed9b2',
-    fallback: '🍃',
-  },
-  {
-    id: 'pu-ni',
-    name: 'Pu-ni',
-    carName: 'Aston Martin',
-    papa: 'Ni-ki',
-    carImage: '/images/pu-ni-car.png',
-    waterImage: '/images/pu-ni-water.png',
-    shirtImage: '/images/pu-ni-shirt.png',
-    capImage: '/images/pu-ni-cap.png',
-    driverImage: '/images/mg1driver-pu-ni.png',
-    color: '#f4a36f',
-    fallback: '🍑',
-  },
-];
+const POINTS = 2;
 
 const QUESTIONS = [
   {
     id: 'car',
-    label: 'ROAD TRIP STYLE 01',
-    title:
-      'Six super-fast cars just zoomed past your ride. Which one caught your eye?',
-    subtitle:
-      'Choose the car that would make you turn your head at the next rest stop.',
+    label: 'The Car',
+    title: 'Six super-fast cars just zoomed past your ride. Which one caught your eye?',
+    sub: 'Choose the car that would make you turn your head at the next rest stop.',
+    image: img.car,
   },
   {
     id: 'waterBottle',
-    label: 'ROAD TRIP STYLE 02',
-    title:
-      'The road is long and the sun is shining. Which water bottle are you bringing?',
-    subtitle:
-      'Choose your trusty anti-dehydration companion for the journey.',
+    label: 'The Bottle',
+    title: 'The road is long and the sun is shining. Which water bottle are you bringing?',
+    sub: 'Choose your trusty anti-dehydration companion for the journey.',
+    image: img.water,
   },
   {
     id: 'shirt',
-    label: 'ROAD TRIP STYLE 03',
-    title:
-      'The team is stopping for a group photo. Which shirt are you wearing?',
-    subtitle:
-      'Pick the shirt that belongs in your road-trip OOTD post.',
+    label: 'The Shirt',
+    title: 'The team is stopping for a group photo. Which shirt are you wearing?',
+    sub: 'Pick the shirt that belongs in your road-trip OOTD post.',
+    image: img.shirt,
   },
   {
     id: 'cap',
-    label: 'ROAD TRIP STYLE 04',
-    title:
-      'The sun is out and the cameras are ready. Which cap completes your look?',
-    subtitle:
-      'Choose your final accessory before the road-trip photo shoot.',
+    label: 'The Cap',
+    title: 'The sun is out and the cameras are ready. Which cap completes your look?',
+    sub: 'Choose your final accessory before the road-trip photo shoot.',
+    image: img.cap,
   },
 ];
 
-const POINTS_PER_CHOICE = 2;
+const EMPTY = { car: null, waterBottle: null, shirt: null, cap: null };
 
-function getImageForQuestion(enchin, questionId) {
-  if (questionId === 'car') return enchin.carImage;
-  if (questionId === 'waterBottle') return enchin.waterImage;
-  if (questionId === 'shirt') return enchin.shirtImage;
-  return enchin.capImage;
-}
-
-function getAltText(enchin, questionId) {
-  if (questionId === 'car') {
-    return `${enchin.carName} race car`;
-  }
-
-  if (questionId === 'waterBottle') {
-    return `${enchin.name} water bottle`;
-  }
-
-  if (questionId === 'shirt') {
-    return `${enchin.name} road-trip shirt`;
-  }
-
-  return `${enchin.name} road-trip cap`;
-}
-
-export default function MG3Customize({ playerName, onNext }) {
-  const [questionIndex, setQuestionIndex] = useState(0);
-
-  const [answers, setAnswers] = useState({
-    car: null,
-    waterBottle: null,
-    shirt: null,
-    cap: null,
-  });
-
-  const [showResult, setShowResult] = useState(false);
-
-  const currentQuestion = QUESTIONS[questionIndex];
-  const currentAnswer = answers[currentQuestion.id];
-
-  const isLastQuestion =
-    questionIndex === QUESTIONS.length - 1;
-
-  const selectedCar = ENCHINS.find(
-    (enchin) => enchin.id === answers.car
-  );
-
-  const selectedBottle = ENCHINS.find(
-    (enchin) => enchin.id === answers.waterBottle
-  );
-
-  const selectedShirt = ENCHINS.find(
-    (enchin) => enchin.id === answers.shirt
-  );
-
-  const selectedCap = ENCHINS.find(
-    (enchin) => enchin.id === answers.cap
-  );
-
-  const scores = ENCHINS.reduce((result, enchin) => {
-    result[enchin.id] = 0;
-    return result;
-  }, {});
-
-  Object.values(answers).forEach((enchinId) => {
-    if (enchinId) {
-      scores[enchinId] =
-        (scores[enchinId] || 0) + POINTS_PER_CHOICE;
-    }
-  });
-
-  const potentialDriver = ENCHINS.reduce(
-    (leader, enchin) => {
-      if (!leader) return enchin;
-
-      return scores[enchin.id] > scores[leader.id]
-        ? enchin
-        : leader;
+export default function MG3Customize({ playerName, onComplete }) {
+  const [draft, setDraft] = usePersistentState(
+    'draft:mg3',
+    { index: 0, answers: EMPTY, locked: false },
+    (v) => {
+      const answers = { ...EMPTY };
+      Object.keys(EMPTY).forEach((k) => {
+        if (ENCHIN_IDS.includes(v.answers?.[k])) answers[k] = v.answers[k];
+      });
+      const index = Math.max(0, Math.min(QUESTIONS.length - 1, Number(v.index) || 0));
+      const locked = !!v.locked && Object.values(answers).every(Boolean);
+      return { index, answers, locked };
     },
-    null
   );
+  const { index, answers, locked } = draft;
+  const q = QUESTIONS[index];
+  const current = answers[q.id];
+  const isLast = index === QUESTIONS.length - 1;
+  const [dir, setDir] = useState(1);
 
-  const chooseAnswer = (enchinId) => {
-    setAnswers((previous) => ({
-      ...previous,
-      [currentQuestion.id]: enchinId,
-    }));
+  const choose = (id) => {
+    sfx.pop();
+    setDraft((d) => ({ ...d, answers: { ...d.answers, [q.id]: id } }));
   };
 
-  const handleNext = () => {
-    if (!currentAnswer) return;
-
-    if (isLastQuestion) {
-      setShowResult(true);
+  const next = () => {
+    if (!current) {
+      sfx.error();
       return;
     }
-
-    setQuestionIndex((previous) => previous + 1);
+    if (isLast) {
+      sfx.lock();
+      setDraft((d) => ({ ...d, locked: true }));
+      return;
+    }
+    sfx.whoosh();
+    setDir(1);
+    setDraft((d) => ({ ...d, index: d.index + 1 }));
   };
 
-  const handleBack = () => {
-    setQuestionIndex((previous) =>
-      Math.max(previous - 1, 0)
+  const back = () => {
+    sfx.back();
+    setDir(-1);
+    setDraft((d) => ({ ...d, index: Math.max(0, d.index - 1) }));
+  };
+
+  const jump = (i) => {
+    // only allow jumping to answered questions or the first unanswered one
+    const firstOpen = QUESTIONS.findIndex((qq) => !answers[qq.id]);
+    if (firstOpen !== -1 && i > firstOpen) return;
+    sfx.tap();
+    setDir(i > index ? 1 : -1);
+    setDraft((d) => ({ ...d, index: i }));
+  };
+
+  if (locked) {
+    const scores = emptyScores();
+    Object.values(answers).forEach((id) => (scores[id] += POINTS));
+    return (
+      <StyleResult
+        playerName={playerName}
+        answers={answers}
+        scores={scores}
+        onEdit={() => {
+          sfx.back();
+          setDraft((d) => ({ ...d, locked: false }));
+        }}
+        onContinue={() => onComplete({ answers, scores })}
+      />
     );
-  };
+  }
 
-  const handleContinue = () => {
-    if (!potentialDriver) return;
-
-    onNext({
-      ...scores,
-
-      miniGame: 'mg3',
-      completed: true,
-
-      carId: selectedCar?.id || null,
-      carName: selectedCar?.carName || null,
-      carPapa: selectedCar?.papa || null,
-      carEnchinId: selectedCar?.id || null,
-
-      waterBottleId: selectedBottle?.id || null,
-      waterBottleName: selectedBottle?.name || null,
-      bottleEnchinId: selectedBottle?.id || null,
-
-      shirtId: selectedShirt?.id || null,
-      shirtEnchinId: selectedShirt?.id || null,
-
-      capId: selectedCap?.id || null,
-      capEnchinId: selectedCap?.id || null,
-
-      choices: {
-        car: answers.car,
-        waterBottle: answers.waterBottle,
-        shirt: answers.shirt,
-        cap: answers.cap,
-      },
-
-      miniGame3Scores: scores,
-      potentialDriver: potentialDriver.id,
-      potentialDriverName: potentialDriver.name,
-    });
-  };
-
-  if (showResult) {
   return (
-    <section className="mg3">
-      <div className="mg3-shell mg3-result-screen">
-        <span className="mg3-location">
-          MISSION 2 · MINI-GAME 3 COMPLETE
-        </span>
+    <section className="page game-page mg3">
+      <GameHead num="03" place="Gas Station" title="Road trip ready!" sub={`${playerName ? `${playerName}, p` : 'P'}ick your road-trip look. Four picks, zero wrong answers.`} />
 
-        <h1>Road Trip Look Locked In!</h1>
+      <div className="mg3-layout">
+        <nav className="look-board" aria-label="Your look so far">
+          {QUESTIONS.map((qq, i) => {
+            const a = answers[qq.id];
+            return (
+              <button
+                key={qq.id}
+                type="button"
+                className={`look-slot ${i === index ? 'is-now' : ''} ${a ? 'is-filled' : ''}`}
+                style={{ '--c': a ? byId(a).color : '#fffdf7' }}
+                onClick={() => jump(i)}
+                aria-label={`${qq.label}${a ? ': picked' : ': not picked yet'}`}
+              >
+                <span className="look-img">{a ? <SafeImg src={qq.image(a)} alt="" /> : <span className="look-q">{i + 1}</span>}</span>
+                <small>{qq.label}</small>
+              </button>
+            );
+          })}
+        </nav>
 
-        <p className="mg3-result-intro">
-          {playerName ? `${playerName}, ` : ''}
-          your team style is ready.
-        </p>
-
-        <div
-          className="mg3-driver-result"
-          style={{
-            '--driver-color':
-              potentialDriver?.color || '#fda4af',
-          }}
-        >
-          {potentialDriver?.driverImage && (
-            <img
-              className="mg3-driver-image"
-              src={potentialDriver.driverImage}
-              alt={`${potentialDriver.name} potential driver`}
-            />
-          )}
-
-          <span>YOUR POTENTIAL DRIVER</span>
-
-          <h2>
-            {potentialDriver?.name || 'Your team'} is leading!
-          </h2>
-
-          <p>
-            {potentialDriver?.name || 'Your chosen Enchin'} has
-            the highest Mini-Game 3 score.
+        <div className={`style-card slide-${dir > 0 ? 'in' : 'back'}`} key={q.id}>
+          <p className="style-step">
+            PICK {index + 1} OF {QUESTIONS.length} · {q.label.toUpperCase()}
           </p>
+          <h2 className="style-q">{q.title}</h2>
+          <p className="style-sub">{q.sub}</p>
+
+          <div className={`style-grid grid-${q.id}`}>
+            {ENCHINS.map((e) => {
+              const sel = current === e.id;
+              return (
+                <button
+                  key={e.id}
+                  type="button"
+                  className={`style-opt ${sel ? 'is-selected' : ''}`}
+                  style={{ '--c': e.color }}
+                  onClick={() => choose(e.id)}
+                  onPointerEnter={() => sfx.hover()}
+                  aria-pressed={sel}
+                  aria-label={`${q.label.replace('The ', '')} option ${ENCHINS.indexOf(e) + 1}`}
+                >
+                  <span className="style-img">
+                    <SafeImg src={q.image(e.id)} alt="" />
+                  </span>
+                  {sel && (
+                    <span className="style-check" aria-hidden="true">
+                      <Icon.check />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
+      </div>
 
-        <div className="mg3-score-list">
-          {ENCHINS.filter(
-            (enchin) => scores[enchin.id] > 0
-          ).map((enchin) => (
-            <div
-              key={enchin.id}
-              className={`mg3-score-row ${
-                potentialDriver?.id === enchin.id
-                  ? 'is-winner'
-                  : ''
-              }`}
-            >
-              <span>{enchin.name}</span>
-
-              <strong>
-                {scores[enchin.id]} points
-              </strong>
-            </div>
-          ))}
+      <div className="action-bar">
+        <p className="action-hint" aria-live="polite">
+          {current ? `Nice pick. ${isLast ? 'Ready to lock in your look?' : 'On to the next pick!'}` : 'Tap one to choose it.'}
+        </p>
+        <div className="action-buttons">
+          <Btn variant="ghost" onClick={back} disabled={index === 0} sound={null}>
+            <Icon.back /> Back
+          </Btn>
+          <Btn variant="primary" onClick={next} disabled={!current} sound={null}>
+            {isLast ? (
+              <>
+                Lock in look <Icon.lock />
+              </>
+            ) : (
+              <>
+                Next pick <Icon.arrow />
+              </>
+            )}
+          </Btn>
         </div>
-
-        <button
-          type="button"
-          className="mg3-continue-button"
-          onClick={handleContinue}
-        >
-          Continue Journey →
-        </button>
       </div>
     </section>
   );
 }
 
+function StyleResult({ playerName, answers, scores, onEdit, onContinue }) {
+  const [leaving, setLeaving] = useState(false);
+  useEffect(() => sfx.fanfare(), []);
+  const max = Math.max(...Object.values(scores));
+  const tops = ENCHINS.filter((e) => scores[e.id] === max);
+  const lead = tops.find((t) => t.id === answers.car) || tops[0];
+  const [saving, setSaving] = useState(false);
+  const picks = QUESTIONS.filter((q) => answers[q.id] === lead.id).map((q) => ({ kind: q.id === 'waterBottle' ? 'water' : q.id }));
+  const photo = useCard(() => renderInstaxCard({ kind: 'mg3', enchinId: lead.id, playerName, picks }), [lead.id, playerName, JSON.stringify(answers)]);
+  const headline = tops.length === 1 ? `Team ${lead.name} vibes!` : 'A mix-and-match icon!';
+
   return (
-    <section className="mg3">
-      <div className="mg3-shell">
-        <header className="mg3-header">
-          <span className="mg3-location">
-            MISSION 2 · MINI-GAME 3
-          </span>
+    <section className="page game-page mg3 result-page">
+      <Confetti />
+      <GameHead num="03" place="Gas Station" title="Look locked in!" sub={`${playerName ? `${playerName}, y` : 'Y'}our road-trip style is ready for the photo shoot.`} />
 
-          <h1>Road Trip Ready!</h1>
+      <div className="outfit">
+        {QUESTIONS.map((q, i) => {
+          const e = byId(answers[q.id]);
+          return (
+            <figure key={q.id} className="outfit-item" style={{ '--c': e.color, '--i': i }}>
+              <SafeImg src={q.image(e.id)} alt={q.label} />
+              <figcaption>
+                <strong>{q.label}</strong>
+              </figcaption>
+            </figure>
+          );
+        })}
+      </div>
 
+      <div className="style-verdict" style={{ '--c': lead.color }}>
+        <SafeImg src={img.flower(lead.id)} alt="" enchinId={lead.id} />
+        <div>
+          <h2>{headline}</h2>
           <p>
-            {playerName ? `${playerName}, ` : ''}
-            choose your road-trip style.
+            {tops.length === 1
+              ? `${lead.name} matches your style best (+${scores[lead.id]} points).`
+              : `Your picks split between ${tops.map((t) => t.name).join(', ')}.`}{' '}
+            Every pick gave its Enchin +{POINTS}.
           </p>
+          <ul className="chip-row">
+            {ENCHINS.filter((e) => scores[e.id] > 0).map((e) => (
+              <li key={e.id} style={{ '--c': e.color }}>
+                {e.name} +{scores[e.id]}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
 
-          <div className="mg3-progress">
-            QUESTION {questionIndex + 1} OF {QUESTIONS.length}
-
-            <div className="mg3-progress-track">
-              <div
-                className="mg3-progress-fill"
-                style={{
-                  width: `${
-                    ((questionIndex + 1) /
-                      QUESTIONS.length) *
-                    100
-                  }%`,
-                }}
-              />
-            </div>
-          </div>
-        </header>
-
-        <main className="mg3-main">
-          <div className="mg3-question">
-            <span>{currentQuestion.label}</span>
-
-            <h2>{currentQuestion.title}</h2>
-
-            <p>{currentQuestion.subtitle}</p>
-          </div>
-
-          <div className="mg3-choice-grid">
-            {ENCHINS.map((enchin) => {
-              const selected =
-                currentAnswer === enchin.id;
-
-              const image = getImageForQuestion(
-                enchin,
-                currentQuestion.id
-              );
-
-              const choiceLabel =
-                currentQuestion.id === 'car'
-                  ? enchin.carName
-                  : enchin.name;
-
-              return (
-                <button
-                  key={enchin.id}
-                  type="button"
-                  className={`mg3-choice ${
-                    selected ? 'is-selected' : ''
-                  }`}
-                  style={{
-                    '--choice-color': enchin.color,
-                  }}
-                  onClick={() => chooseAnswer(enchin.id)}
-                  aria-label={`Choose ${choiceLabel}`}
-                  aria-pressed={selected}
-                >
-                  <span className="mg3-choice-media">
-                    {image ? (
-                      <img
-                        src={image}
-                        alt=""
-                        className={`mg3-choice-image mg3-choice-image-${currentQuestion.id}`}
-                        width="120"
-                        height="80"
-                        draggable="false"
-                      />
-                    ) : (
-                      <span
-                        className="mg3-choice-fallback"
-                        aria-hidden="true"
-                      >
-                        {enchin.fallback}
-                      </span>
-                    )}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </main>
-
-        <footer className="mg3-footer">
-          <button
-            type="button"
-            className="mg3-back-button"
-            onClick={handleBack}
-            disabled={questionIndex === 0}
+      <div className="action-bar">
+        <div className="action-buttons wrap">
+          <Btn variant="ghost" onClick={onEdit} sound={null}>
+            <Icon.back /> Change my look
+          </Btn>
+          <Btn
+            variant="soft"
+            disabled={!photo || saving}
+            onClick={async () => {
+              setSaving(true);
+              await saveImage({ blob: photo.blob, filename: `endrive-mg3-team-${lead.id}.png` });
+              setSaving(false);
+            }}
           >
-            ← Back
-          </button>
-
-          <button
-            type="button"
-            className="mg3-next-button"
-            onClick={handleNext}
-            disabled={!currentAnswer}
+            <Icon.save /> {saving ? 'Saving…' : photo ? 'Save photo' : 'Developing…'}
+          </Btn>
+          <Btn
+            variant="primary"
+            sound="points"
+            disabled={leaving}
+            onClick={() => {
+              setLeaving(true);
+              onContinue();
+            }}
           >
-            {isLastQuestion
-              ? 'Lock In Look ✨'
-              : 'Next Question →'}
-          </button>
-        </footer>
+            Continue journey <Icon.arrow />
+          </Btn>
+        </div>
       </div>
     </section>
   );

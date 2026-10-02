@@ -1,501 +1,552 @@
-import { useState, useRef, useEffect } from 'react';
-import './MG1Seating.css';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ENCHINS, ENCHIN_IDS, byId, img, video } from '../data';
+import { Btn, Confetti, Icon, Modal, Portal, SafeImg } from '../components/ui';
+import Cutscene from '../components/Cutscene';
+import { usePersistentState } from '../lib/storage';
+import { canvasToBlob, renderInstaxCard, renderSeatingCard, saveImage } from '../lib/exportImage';
+import { useCard } from '../lib/useCard';
+import { sfx } from '../lib/sound';
 
-const SEATS = [
-  { id: 'seat1', label: 'Driver' },          // 1 (front)
-  { id: 'seat2', label: 'Passenger Princess' }, // 2 (front)
-  { id: 'seat3', label: 'Middle Left' },     // 3
-  { id: 'seat4', label: 'Middle Right' },    // 4
-  { id: 'seat5', label: 'Back Left' },       // 5
-  { id: 'seat6', label: 'Back Right' },      // 6
+// Seat hotspots, as % of the top-down car photo (car facing right).
+export const SEATS = [
+  { id: 'seat1', label: 'Coolest Driver', x: 68.2, y: 30.5 },
+  { id: 'seat2', label: 'Passenger Princess', x: 68.2, y: 69 },
+  { id: 'seat3', label: 'Snack Distributor', x: 48.6, y: 31 },
+  { id: 'seat4', label: 'Sleep Catcher', x: 48.6, y: 68.5 },
+  { id: 'seat5', label: 'Dizzy During the Ride', x: 25.5, y: 31.5 },
+  { id: 'seat6', label: 'Road Trip Photographer', x: 25.5, y: 67.5 },
 ];
 
-const ENCHINS = [
-  { id: 'wonchu',  name: 'Wonchu',  image: '/images/wonchu-flower.png' },
-  { id: 'jakey',   name: 'Jakey',   image: '/images/jakey-flower.png' },
-  { id: 'noxstar', name: 'Noxstar', image: '/images/noxstar-flower.png' },
-  { id: 'snowe',   name: 'Snowe',   image: '/images/snowe-flower.png' },
-  { id: 'kishu',   name: 'Kishu',   image: '/images/kishu-flower.png' },
-  { id: 'pu-ni',   name: 'Pu Ni',   image: '/images/pu-ni-flower.png' },
-];
-
-// Map enchin id to their driver result image
-const DRIVER_RESULT_IMAGES = {
-  wonchu:  '/images/mg1driver-wonchu.png',
-  jakey:   '/images/mg1driver-jakey.png',
-  noxstar: '/images/mg1driver-noxstar.png',
-  snowe:   '/images/mg1driver-snowe.png',
-  kishu:   '/images/mg1driver-kishu.png',
-  'pu-ni': '/images/mg1driver-pu-ni.png',
-};
-
-// Visual layout:
-// Row 0: 5 3 1
-// Row 1: 6 4 2
-const SEAT_ORDER = [
-  ['seat5', 'seat3', 'seat1'],
-  ['seat6', 'seat4', 'seat2'],
-];
-
-export default function MG1Seating({ playerName, onNext }) {
-  return (
-    <MG1SeatingInner
-      playerName={playerName}
-      enchins={ENCHINS}
-      driverResultImages={DRIVER_RESULT_IMAGES}
-      onNext={onNext}
-    />
-  );
+function useIsPortrait() {
+  const q = '(max-width: 760px) and (orientation: portrait)';
+  const [p, setP] = useState(() => window.matchMedia(q).matches);
+  useEffect(() => {
+    const m = window.matchMedia(q);
+    const on = () => setP(m.matches);
+    m.addEventListener?.('change', on);
+    return () => m.removeEventListener?.('change', on);
+  }, []);
+  return p;
 }
 
-function MG1SeatingInner({ playerName, enchins, driverResultImages, onNext }) {
-  const [seating, setSeating] = useState({}); // seatId -> enchinId
-  const [draggedId, setDraggedId] = useState(null);
-
-  // Main video ref (stays on last frame)
-  const videoRef = useRef(null);
-
-  // Confirmation & result state
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [locked, setLocked] = useState(false);
-  const [driverEnchin, setDriverEnchin] = useState(null);
-
-  // Debug: log seating whenever it changes
-  useEffect(() => {
-    console.log('Current seating:', seating);
-  }, [seating]);
-
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = 0;
-      const playPromise = videoRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // Autoplay blocked; user may need to interact first.
-        });
-      }
+function validSeating(s) {
+  const out = {};
+  const used = new Set();
+  if (!s || typeof s !== 'object') return out;
+  for (const seat of SEATS) {
+    const id = s[seat.id];
+    if (ENCHIN_IDS.includes(id) && !used.has(id)) {
+      out[seat.id] = id;
+      used.add(id);
     }
-  }, []);
+  }
+  return out;
+}
 
-  const isFull = Object.keys(seating).length === SEATS.length;
+export default function MG1Seating({ playerName, onComplete, onExit }) {
+  const [draft, setDraft] = usePersistentState(
+    'draft:mg1',
+    { phase: 'intro', seating: {} },
+    (v, init) => ({ phase: ['intro', 'seat', 'result'].includes(v.phase) ? v.phase : init.phase, seating: validSeating(v.seating) }),
+  );
+  const { phase, seating } = draft;
+  const setSeating = useCallback((fn) => setDraft((d) => ({ ...d, seating: typeof fn === 'function' ? fn(d.seating) : fn })), [setDraft]);
+  const setPhase = (p) => setDraft((d) => ({ ...d, phase: p }));
 
-  const handleLockIn = () => {
-    console.log('handleLockIn called, isFull:', isFull, 'seating:', seating);
-    if (!isFull) return;
-    setShowConfirm(true);
-  };
-
-  const handleConfirmLock = () => {
-    console.log('handleConfirmLock called');
-    console.log('seating before lock:', seating);
-
-    setShowConfirm(false);
-    setLocked(true);
-
-    const driverId = seating.seat1;
-    const driver = enchins.find((e) => e.id === driverId) || null;
-
-    console.log('driverId:', driverId);
-    console.log('driver:', driver);
-
-    setDriverEnchin(driver);
-
-    // Do NOT call onNext here; call it on Continue button
-  };
-
-  const handleCancelLock = () => {
-    setShowConfirm(false);
-  };
-
-  const handleDragStartPool = (e, enchinId) => {
-    console.log('Drag start from pool:', enchinId);
-    setDraggedId(enchinId);
-    e.dataTransfer.setData('text/plain', enchinId);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragStartSeat = (e, enchinId) => {
-    console.log('Drag start from seat:', enchinId);
-    setDraggedId(enchinId);
-    e.dataTransfer.setData('text/plain', enchinId);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDropSeat = (e, seatId) => {
-    e.preventDefault();
-    const enchinId = e.dataTransfer.getData('text/plain');
-    console.log('Drop on seat:', seatId, 'enchinId:', enchinId);
-    if (!enchinId) return;
-
-    setSeating((prev) => {
-      const updated = { ...prev };
-      const existingInTarget = updated[seatId];
-
-      // Remove dragged Enchin from its old seat (if any)
-      Object.keys(updated).forEach((key) => {
-        if (updated[key] === enchinId) {
-          delete updated[key];
-        }
-      });
-
-      // If there was someone in the target seat, swap them
-      if (existingInTarget && existingInTarget !== enchinId) {
-        let oldSeatId = null;
-        Object.keys(prev).forEach((key) => {
-          if (prev[key] === enchinId) oldSeatId = key;
-        });
-
-        if (oldSeatId) {
-          updated[oldSeatId] = existingInTarget;
-        } else {
-          // Dragged from pool: find any empty seat for the existing one
-          const allSeatIds = SEATS.map((s) => s.id);
-          const used = new Set(Object.keys(updated));
-          const free = allSeatIds.find((id) => !used.has(id));
-          if (free) {
-            updated[free] = existingInTarget;
-          }
-        }
-      }
-
-      // Place dragged Enchin in the target seat
-      updated[seatId] = enchinId;
-
-      console.log('New seating after drop:', updated);
-      return updated;
-    });
-
-    setDraggedId(null);
-  };
-
-  // Result screen after lock-in (chosen driver)
-  if (locked && driverEnchin) {
-    const resultImageUrl = driverResultImages[driverEnchin.id];
-
-    console.log('Rendering result screen for driver:', driverEnchin);
-
+  if (phase === 'intro') {
     return (
-      <section className="game">
-        <div className="game-box">
-          <div className="game-head">
-            <div className="game-location">ROAD TRIP PREP</div>
-            <h1>Your Mission 1 : Seat the ENCHIN chosen driver is...</h1>
-            <p>
-              Driver: <strong>{driverEnchin.name}</strong>
-            </p>
-          </div>
-
-          <div className="game-area">
-            <div
-              style={{
-                display: 'grid',
-                placeItems: 'center',
-                gap: '18px',
-                padding: '24px',
-              }}
-            >
-              <img
-                src={resultImageUrl}
-                alt={`${driverEnchin.name} driver result`}
-                style={{
-                  width: 'min(900px, 96vw)',
-                  height: 'auto',
-                  objectFit: 'contain',
-                  display: 'block',
-                  borderRadius: '16px',
-                  border: '3px solid #0f172a',
-                  boxShadow: '0 12px 30px rgba(2,6,23,0.45)',
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="game-message">
-            <div
-              style={{
-                display: 'flex',
-                gap: '12px',
-                justifyContent: 'center',
-                flexWrap: 'wrap',
-              }}
-            >
-              <a
-                href={resultImageUrl}
-                download
-                className="game-btn"
-                style={{
-                  textDecoration: 'none',
-                  background: '#fbbf24',      // yellow
-                  color: '#18221f',
-                  border: '2px solid #0f172a',
-                  boxShadow: '0 4px 0 #0f172a',
-                }}
-              >
-                Save Image
-              </a>
-
-              <button
-                className="game-btn"
-                onClick={() => {
-                  console.log('Continue clicked');
-
-                  const driverId = seating.seat1;
-                  const scores = {};
-                  if (driverId) {
-                    scores[driverId] = 3;
-                  }
-
-                  onNext(scores);
-                }}
-                style={{
-                  background: '#10b981',      // green
-                  color: '#fff',
-                  border: '2px solid #0f172a',
-                  boxShadow: '0 4px 0 #0f172a',
-                }}
-              >
-                Continue journey
-              </button>
-            </div>
-          </div>
-        </div>
+      <section className="page game-page mg1">
+        <GameHead num="01" place="Waiting Shed" title="Seat the ENCHIN" sub="Your ride just pulled up. Take a look inside…" />
+        <Cutscene
+          src={video.seatingIntro.src}
+          poster={video.seatingIntro.poster}
+          fallbackImage={img.carTop}
+          label="Checking out the ride"
+          onEnd={() => {
+            sfx.pop();
+            setPhase('seat');
+          }}
+        />
       </section>
     );
   }
 
-  // Seating UI
+  if (phase === 'result' && Object.keys(seating).length === 6) {
+    return (
+      <SeatingResult
+        playerName={playerName}
+        seating={seating}
+        onBack={() => {
+          sfx.back();
+          setPhase('seat');
+        }}
+        onContinue={() => {
+          const driverId = seating.seat1;
+          onComplete({ seating, driverId, scores: { [driverId]: 3 } });
+        }}
+      />
+    );
+  }
+
   return (
-    <section className="game">
-      <div className="game-box">
-        <div className="game-head">
-          <div className="game-location">ROAD TRIP PREP</div>
-          <h1>SEAT THE ENCHIN</h1>
-          <p>Drag any ENCHIN into a seat. Swap by dragging one onto another.</p>
-        </div>
+    <SeatingBoard
+      playerName={playerName}
+      seating={seating}
+      setSeating={setSeating}
+      onReplayIntro={() => setPhase('intro')}
+      onLocked={() => setPhase('result')}
+      onExit={onExit}
+    />
+  );
+}
 
-        <div className="game-area">
-          <div className="seating-content">
-            {/* Enchin Pool */}
-            <div className="seating-pool">
-              <h3 className="seating-pool-title">DRAG THE ENCHIN</h3>
-              <div className="seating-enchin-list">
-                {enchins.map((e) => {
-                  const isSeated = Object.values(seating).includes(e.id);
-                  return (
-                    <div
-                      key={e.id}
-                      draggable={!isSeated}
-                      onDragStart={(dragEvt) => handleDragStartPool(dragEvt, e.id)}
-                      style={{
-                        opacity: isSeated ? 0.25 : 1,
-                        cursor: isSeated ? 'not-allowed' : 'grab',
-                        transition: 'opacity 0.18s ease, transform 0.18s ease',
-                      }}
-                      title={isSeated ? 'Already seated' : e.name}
-                    >
-                      <img
-                        src={e.image}
-                        alt={e.name}
-                        draggable={false}
-                        style={{
-                          width: 72,
-                          height: 'auto',
-                          objectFit: 'contain',
-                          display: 'block',
-                        }}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+export function GameHead({ num, place, title, sub, children }) {
+  return (
+    <header className="game-head">
+      <p className="eyebrow">
+        STOP {num} · {place.toUpperCase()}
+      </p>
+      <h1 className="game-title">{title}</h1>
+      {sub && <p className="game-sub">{sub}</p>}
+      {children}
+    </header>
+  );
+}
 
-            {/* Car + Video (held on last frame) + Seats */}
-            <div className="seating-car">
-              {/* Intro video (stays on last frame) */}
-              <div className="seating-car-media">
-                <video
-                  ref={videoRef}
-                  src="/images/mg1seatingintrovid.mp4"
-                  controls={false}
-                  playsInline
-                  muted
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                    display: 'block',
-                    borderRadius: '18px',
+/* ================================================================== */
+/*  Seating board: drag & drop (mouse + touch + pen) AND tap-to-place */
+/* ================================================================== */
+function SeatingBoard({ playerName, seating, setSeating, onReplayIntro, onLocked }) {
+  const portrait = useIsPortrait();
+  const [selected, setSelected] = useState(null); // enchin id
+  const [drag, setDrag] = useState(null); // { id, x, y, over }
+  const [confirm, setConfirm] = useState(false);
+  const [nudge, setNudge] = useState(0);
+  const [justPlaced, setJustPlaced] = useState(null);
+  const dragRef = useRef(null);
+  const suppressClick = useRef(false);
+
+  const seatOf = useCallback((id) => Object.keys(seating).find((k) => seating[k] === id) || null, [seating]);
+  const filled = Object.keys(seating).length;
+  const isFull = filled === SEATS.length;
+  const unseated = ENCHINS.filter((e) => !Object.values(seating).includes(e.id));
+
+  const place = useCallback(
+    (id, seatId) => {
+      if (!id || !seatId) return;
+      setSeating((prev) => {
+        const next = { ...prev };
+        const from = Object.keys(prev).find((k) => prev[k] === id) || null;
+        const occupant = prev[seatId];
+        if (from === seatId) return prev;
+        if (from) delete next[from];
+        next[seatId] = id;
+        if (occupant && occupant !== id) {
+          if (from) next[from] = occupant; // swap seats; otherwise the occupant simply returns to the tray
+        }
+        return next;
+      });
+      const occupant = seating[seatId];
+      if (occupant && occupant !== id) sfx.swap();
+      else sfx.drop();
+      setJustPlaced(seatId);
+      window.setTimeout(() => setJustPlaced((s) => (s === seatId ? null : s)), 500);
+    },
+    [seating, setSeating],
+  );
+
+  const unseat = useCallback(
+    (id) => {
+      const from = seatOf(id);
+      if (!from) return;
+      setSeating((prev) => {
+        const next = { ...prev };
+        delete next[from];
+        return next;
+      });
+      sfx.back();
+    },
+    [seatOf, setSeating],
+  );
+
+  /* ---------------- pointer drag ---------------- */
+  const onPointerDown = (e, id) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    dragRef.current = { id, sx: e.clientX, sy: e.clientY, pid: e.pointerId, moved: false };
+  };
+
+  useEffect(() => {
+    const move = (e) => {
+      const d = dragRef.current;
+      if (!d || e.pointerId !== d.pid) return;
+      const dist = Math.hypot(e.clientX - d.sx, e.clientY - d.sy);
+      if (!d.moved && dist < 7) return;
+      if (!d.moved) {
+        d.moved = true;
+        sfx.pick();
+        setSelected(null);
+      }
+      e.preventDefault();
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const over = el?.closest?.('[data-drop]')?.getAttribute('data-drop') || null;
+      setDrag({ id: d.id, x: e.clientX, y: e.clientY, over });
+    };
+    const up = (e) => {
+      const d = dragRef.current;
+      if (!d || e.pointerId !== d.pid) return;
+      dragRef.current = null;
+      if (!d.moved) return; // it was a tap — let onClick handle it
+      suppressClick.current = true;
+      window.setTimeout(() => (suppressClick.current = false), 60);
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const over = el?.closest?.('[data-drop]')?.getAttribute('data-drop') || null;
+      setDrag(null);
+      if (over && over.startsWith('seat')) place(d.id, over);
+      else if (over === 'tray') unseat(d.id);
+      else sfx.back();
+    };
+    const cancel = () => {
+      dragRef.current = null;
+      setDrag(null);
+    };
+    window.addEventListener('pointermove', move, { passive: false });
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', cancel);
+    window.addEventListener('blur', cancel);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', cancel);
+      window.removeEventListener('blur', cancel);
+    };
+  }, [place, unseat]);
+
+  useEffect(() => {
+    document.body.classList.toggle('is-dragging', !!drag);
+    return () => document.body.classList.remove('is-dragging');
+  }, [drag]);
+
+  /* ---------------- tap / keyboard ---------------- */
+  const tapToken = (id) => {
+    if (suppressClick.current) return;
+    if (selected === id) {
+      setSelected(null);
+      sfx.back();
+      return;
+    }
+    setSelected(id);
+    sfx.pick();
+  };
+
+  const tapSeat = (seatId) => {
+    if (suppressClick.current) return;
+    const occupant = seating[seatId];
+    if (selected) {
+      if (selected === occupant) {
+        setSelected(null);
+        sfx.back();
+        return;
+      }
+      place(selected, seatId);
+      setSelected(null);
+      return;
+    }
+    if (occupant) {
+      setSelected(occupant);
+      sfx.pick();
+      return;
+    }
+    // Empty seat tapped with nobody picked: auto-pick the next Enchin in the tray.
+    if (unseated[0]) {
+      place(unseated[0].id, seatId);
+      return;
+    }
+    sfx.error();
+    setNudge((n) => n + 1);
+  };
+
+  const tapTray = () => {
+    if (suppressClick.current) return;
+    if (selected && seatOf(selected)) {
+      unseat(selected);
+      setSelected(null);
+    }
+  };
+
+  const quickFill = () => {
+    const free = SEATS.filter((s) => !seating[s.id]).map((s) => s.id);
+    const pool = [...unseated.map((e) => e.id)].sort(() => Math.random() - 0.5);
+    if (!free.length) return;
+    setSeating((prev) => {
+      const next = { ...prev };
+      free.forEach((sid, i) => {
+        if (pool[i]) next[sid] = pool[i];
+      });
+      return next;
+    });
+    sfx.sparkle();
+    setSelected(null);
+  };
+
+  const clearAll = () => {
+    setSeating({});
+    setSelected(null);
+    sfx.whoosh();
+  };
+
+  const seatStyle = (s) =>
+    portrait ? { left: `${s.y}%`, top: `${100 - s.x}%` } : { left: `${s.x}%`, top: `${s.y}%` };
+
+  const hint = drag
+    ? drag.over?.startsWith('seat')
+      ? `Make ${byId(drag.id).name} the ${SEATS.find((s) => s.id === drag.over).label}`
+      : drag.over === 'tray'
+        ? `Drop to take ${byId(drag.id).name} out of the van`
+        : 'Drag onto a seat'
+    : selected
+      ? seatOf(selected)
+        ? `${byId(selected).name} selected — tap another seat to swap, or tap the tray to take them out`
+        : `${byId(selected).name} selected — now tap a seat`
+      : isFull
+        ? 'Everyone’s buckled in! Lock it in when you’re happy.'
+        : `Drag an Enchin into a seat, or tap one then tap a seat · ${filled}/6 seated`;
+
+  return (
+    <section className="page game-page mg1">
+      <GameHead num="01" place="Waiting Shed" title="Seat the ENCHIN" sub="Everyone needs a seat. Swap by dropping one ENCHIN onto another.">
+        <button type="button" className="link-btn" onClick={onReplayIntro}>
+          <Icon.play width="14" height="14" /> Replay intro
+        </button>
+      </GameHead>
+
+      <div className="mg1-layout">
+        <div
+          className={`tray ${drag && seatOf(drag.id) ? 'is-target' : ''} ${drag?.over === 'tray' ? 'is-over' : ''}`}
+          data-drop="tray"
+          onClick={tapTray}
+          key={`tray-${nudge}`}
+        >
+          <span className="tray-label">{unseated.length ? 'WAITING AT THE SHED' : 'ALL ABOARD'}</span>
+          <div className="tray-list">
+            {ENCHINS.map((e) => {
+              const seated = !!seatOf(e.id);
+              if (seated) return <span key={e.id} className="token-slot" aria-hidden="true" />;
+              return (
+                <button
+                  key={e.id}
+                  type="button"
+                  className={`token ${selected === e.id ? 'is-selected' : ''} ${drag?.id === e.id ? 'is-ghosted' : ''}`}
+                  style={{ '--c': e.color }}
+                  onPointerDown={(ev) => onPointerDown(ev, e.id)}
+                  onClick={(ev) => {
+                    ev.stopPropagation();
+                    tapToken(e.id);
                   }}
-                />
-              </div>
-
-              {/* Seat grid on top */}
-              <div className="seating-grid">
-                {SEAT_ORDER.map((row, rowIndex) => (
-                  <div key={`row-${rowIndex}`} className="seating-row">
-                    {row.map((seatId) => {
-                      const seat = SEATS.find((s) => s.id === seatId);
-                      const occupiedId = seating[seat.id];
-                      const occupied = enchins.find((en) => en.id === occupiedId);
-
-                      let className = 'seating-seat';
-                      if (occupied) className += ' occupied';
-                      else if (draggedId) className += ' ready';
-
-                      return (
-                        <div
-                          key={seat.id}
-                          className={className}
-                          data-seat-id={seat.id}
-                          onDragOver={handleDragOver}
-                          onDrop={(dropEvt) => handleDropSeat(dropEvt, seat.id)}
-                          aria-label={`${seat.label} seat${occupied ? ` occupied by ${occupied.name}` : ''}`}
-                        >
-                          <div style={{ textAlign: 'center' }}>
-                            <div className="seating-seat-label">{seat.label}</div>
-                            <div className="seating-seat-name">
-                              {occupied ? (
-                                <div
-                                  draggable
-                                  onDragStart={(dragEvt) =>
-                                    handleDragStartSeat(dragEvt, occupied.id)
-                                  }
-                                  title={`Drag ${occupied.name} to another seat`}
-                                  style={{
-                                    cursor: 'grab',
-                                    display: 'inline-block',
-                                  }}
-                                >
-                                  <img
-                                    src={occupied.image}
-                                    alt={occupied.name}
-                                    draggable={false}
-                                    style={{
-                                      width: 80,
-                                      height: 'auto',
-                                      objectFit: 'contain',
-                                      display: 'block',
-                                    }}
-                                  />
-                                </div>
-                              ) : (
-                                <span></span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
-            </div>
+                  aria-pressed={selected === e.id}
+                  aria-label={`${e.name}. ${selected === e.id ? 'Selected. Now choose a seat.' : 'Pick to seat.'}`}
+                >
+                  <SafeImg src={img.flower(e.id)} alt="" enchinId={e.id} />
+                  <span>{e.name}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="game-message">
-          <button
-            className="game-btn"
-            onClick={handleLockIn}
-            disabled={!isFull}
-            style={{ opacity: !isFull ? 0.5 : 1 }}
-          >
-            LOCK IN
-          </button>
+        <div className={`car-stage ${portrait ? 'is-portrait' : ''} ${drag || selected ? 'is-armed' : ''}`}>
+          <SafeImg src={portrait ? img.carTopPortrait : img.carTop} alt="Top-down view of the six-seat car" className="car-photo" />
+          <span className="car-front" aria-hidden="true">
+            FRONT <Icon.arrow width="14" height="14" />
+          </span>
+          {SEATS.map((s) => {
+            const occ = seating[s.id] ? byId(seating[s.id]) : null;
+            const over = drag?.over === s.id;
+            return (
+              <button
+                key={s.id}
+                type="button"
+                data-drop={s.id}
+                className={`seat ${s.id === 'seat1' ? 'is-driver' : ''} ${occ ? 'is-filled' : ''} ${over ? 'is-over' : ''} ${
+                  selected && selected === occ?.id ? 'is-selected' : ''
+                } ${justPlaced === s.id ? 'is-bounce' : ''}`}
+                style={{ ...seatStyle(s), '--c': occ?.color || '#fffdf7' }}
+                onClick={() => tapSeat(s.id)}
+                onPointerDown={occ ? (ev) => onPointerDown(ev, occ.id) : undefined}
+                aria-label={`${s.label} seat${occ ? `, ${occ.name} is sitting here` : ', empty'}`}
+              >
+                {occ ? (
+                  <SafeImg src={img.flower(occ.id)} alt="" enchinId={occ.id} className={`seat-enchin ${drag?.id === occ.id ? 'is-ghosted' : ''}`} />
+                ) : (
+                  <span className="seat-empty">+</span>
+                )}
+                <span className="seat-label">
+                  {s.id === 'seat1' && <Icon.wheel width="12" height="12" />}
+                  {s.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Confirmation Modal (no preview, just text + buttons) */}
-      {showConfirm && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(2,6,23,0.7)',
-            display: 'grid',
-            placeItems: 'center',
-            zIndex: 50,
-          }}
-        >
-          <div
-            style={{
-              background: '#fffdf7',
-              color: '#18221f',
-              padding: '24px',
-              borderRadius: '16px',
-              border: '3px solid #0f172a',
-              maxWidth: '420px',
-              width: '90vw',
-              boxShadow: '0 20px 40px rgba(2,6,23,0.45)',
+      <div className="action-bar">
+        <p className="action-hint" aria-live="polite">
+          {hint}
+        </p>
+        <div className="action-buttons">
+          <Btn variant="ghost" onClick={clearAll} disabled={!filled}>
+            Clear
+          </Btn>
+          {!isFull && (
+            <Btn variant="ghost" onClick={quickFill} sound={null}>
+              <Icon.shuffle /> Fill the rest
+            </Btn>
+          )}
+          <Btn
+            variant="primary"
+            disabled={!isFull}
+            onClick={() => {
+              setConfirm(true);
             }}
           >
-            <h2
-              style={{
-                margin: '0 0 8px',
-                fontSize: '18px',
-                fontWeight: 800,
-              }}
-            >
-              CONFIRM SEATING CHART
-            </h2>
-            <p
-              style={{
-                margin: '0 0 12px',
-                fontSize: '13px',
-                opacity: 0.8,
-              }}
-            >
-              {playerName ? (
-                <>
-                  <strong>{playerName}</strong>, are you sure this is the seating chart you want to lock in?
-                </>
-              ) : (
-                'Are you sure this is the seating chart you want to lock in?'
-              )}
-            </p>
-
-            <div
-              style={{
-                display: 'flex',
-                gap: '12px',
-                justifyContent: 'flex-end',
-                marginTop: '18px',
-              }}
-            >
-              <button
-                className="game-btn"
-                onClick={handleCancelLock}
-                style={{
-                  background: '#e2e8f0',
-                  color: '#18221f',
-                  border: '2px solid #0f172a',
-                  boxShadow: '0 4px 0 #0f172a',
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="game-btn"
-                onClick={handleConfirmLock}
-                style={{
-                  background: '#10b981',
-                  color: '#fff',
-                  border: '2px solid #0f172a',
-                  boxShadow: '0 4px 0 #0f172a',
-                }}
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
+            Lock in seats <Icon.lock />
+          </Btn>
         </div>
+      </div>
+
+      {drag && (
+        <Portal>
+        <div className="drag-ghost" style={{ transform: `translate(${drag.x}px, ${drag.y}px)`, '--c': byId(drag.id).color }} aria-hidden="true">
+          <SafeImg src={img.flower(drag.id)} alt="" enchinId={drag.id} />
+        </div>
+        </Portal>
       )}
+
+      <Modal
+        open={confirm}
+        title="Lock in the seating chart?"
+        onClose={() => setConfirm(false)}
+        actions={
+          <>
+            <Btn variant="ghost" onClick={() => setConfirm(false)} data-autofocus>
+              Keep editing
+            </Btn>
+            <Btn
+              variant="primary"
+              sound="lock"
+              onClick={() => {
+                setConfirm(false);
+                onLocked();
+              }}
+            >
+              Lock it in
+            </Btn>
+          </>
+        }
+      >
+        <p>
+          {playerName ? <strong>{playerName}</strong> : 'Hey'}, is this the crew you want? You can still come back and change it
+          before you continue.
+        </p>
+        <ul className="mini-seats">
+          {SEATS.map((s) => (
+            <li key={s.id} className={s.id === 'seat1' ? 'is-driver' : ''}>
+              <SafeImg src={img.flower(seating[s.id])} alt="" enchinId={seating[s.id]} />
+              <span>
+                <small>{s.label}</small>
+                <strong>{byId(seating[s.id])?.name}</strong>
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Modal>
+    </section>
+  );
+}
+
+/* ================================================================== */
+/*  Result: driver reveal + generated seating chart photo              */
+/* ================================================================== */
+function SeatingResult({ playerName, seating, onBack, onContinue }) {
+  const driver = byId(seating.seat1);
+  const [card, setCard] = useState(null); // { url, blob }
+  const [saving, setSaving] = useState('');
+  const [leaving, setLeaving] = useState(false);
+
+  useEffect(() => {
+    sfx.fanfare();
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    let url;
+    renderSeatingCard({ seating, seats: SEATS, playerName })
+      .then(async (canvas) => {
+        const blob = await canvasToBlob(canvas);
+        if (!alive || !blob) return;
+        url = URL.createObjectURL(blob);
+        setCard({ url, blob });
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [seating, playerName]);
+
+  const photo = useCard(() => renderInstaxCard({ kind: 'mg1', enchinId: driver.id, playerName }), [driver.id, playerName]);
+
+  const save = async (which) => {
+    setSaving(which);
+    if (which === 'card' && card) await saveImage({ blob: card.blob, filename: 'endrive-seating-chart.png' });
+    if (which === 'driver') await saveImage(photo ? { blob: photo.blob, filename: `endrive-mg1-${driver.id}.png` } : { url: img.driverPng(driver.id), filename: `${driver.id}-driver.png` });
+    setSaving('');
+  };
+
+  return (
+    <section className="page game-page mg1 result-page">
+      <Confetti />
+      <GameHead num="01" place="Waiting Shed" title={`${driver.name} took the wheel!`} sub="Whoever you seat as driver is your subconscious pick…" />
+
+      <div className="result-grid">
+        <figure className="polaroid tilt-l">
+          <SafeImg src={img.driver(driver.id)} alt={`${driver.name} in the driver seat`} enchinId={driver.id} />
+          <figcaption>
+            <span className="points-chip" style={{ '--c': driver.color }}>
+              +3 driver points · {driver.name}
+            </span>
+          </figcaption>
+        </figure>
+        <figure className="polaroid tilt-r">
+          {card ? <img src={card.url} alt="Your generated seating chart" /> : <div className="card-loading">Developing your photo…</div>}
+          <figcaption>Your seating chart</figcaption>
+        </figure>
+      </div>
+
+      <div className="action-bar">
+        <div className="action-buttons wrap">
+          <Btn variant="ghost" onClick={onBack} sound={null}>
+            <Icon.back /> Change seats
+          </Btn>
+          <Btn variant="soft" onClick={() => save('card')} disabled={!card || !!saving}>
+            <Icon.save /> {saving === 'card' ? 'Saving…' : 'Save seating chart'}
+          </Btn>
+          <Btn variant="soft" onClick={() => save('driver')} disabled={!!saving}>
+            <Icon.save /> {saving === 'driver' ? 'Saving…' : 'Save driver photo'}
+          </Btn>
+          <Btn
+            variant="primary"
+            sound="points"
+            disabled={leaving}
+            onClick={() => {
+              setLeaving(true);
+              onContinue();
+            }}
+          >
+            Continue journey <Icon.arrow />
+          </Btn>
+        </div>
+      </div>
     </section>
   );
 }

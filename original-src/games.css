@@ -1,0 +1,132 @@
+/* =====================================================
+   SHARED GAME
+===================================================== */
+
+.game {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  padding: 32px;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at top,
+      rgba(255, 255, 255, 0.9),
+      transparent 45%
+    ),
+    linear-gradient(
+      180deg,
+      #fff7ed 0%,
+      #f8efe6 60%,
+      #efe6dd 100%
+    );
+}
+
+.game-box {
+  display: flex;
+  flex-direction: column;
+  width: min(1100px, 100%);
+  min-height: min(760px, calc(100vh - 64px));
+  overflow: hidden;
+  border: 3px solid #18221f;
+  border-radius: 28px;
+  background: #fffdf7;
+  box-shadow: 0 18px 0 #18221f;
+}
+
+.game-head {
+  flex-shrink: 0;
+  padding: 22px 28px 18px;
+  border-bottom: 3px solid #18221f;
+  background: linear-gradient(180deg, #fff8f0, #fffdf7);
+  text-align: center;
+}
+
+.game-location {
+  color: #555;
+  font-family: "Space Mono", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+
+.game-head h1 {
+  margin: 5px 0 0;
+  color: #18221f;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: clamp(28px, 5vw, 54px);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+.game-head p {
+  margin: 7px 0 0;
+  color: #333;
+  font-family: "Space Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.game-area {
+  position: relative;
+  flex: 1;
+  min-height: 480px;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      800px 400px at 50% -10%,
+      rgba(255, 180, 120, 0.18),
+      transparent 60%
+    ),
+    #fafafa;
+}
+
+.game-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
+  padding: 12px 20px;
+  border-top: 3px solid #18221f;
+  background: #fffdf7;
+  font-family: "Space Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.game-btn {
+  border: 3px solid #18221f;
+  border-radius: 999px;
+  background: #d52e45;
+  color: #fffdf7;
+  padding: 14px 28px;
+  font-family: "Space Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  box-shadow: 0 5px 0 #18221f;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.game-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 0 #18221f;
+}
+
+.game-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 #18221f;
+}
+
+.game-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

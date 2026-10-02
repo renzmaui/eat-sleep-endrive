@@ -1,0 +1,343 @@
+.seating-content {
+  width: min(900px, 100%);
+  margin: 0 auto;
+  padding: 32px;
+}
+
+.seating-pool {
+  margin-bottom: 32px;
+}
+
+.seating-pool-title {
+  margin: 0 0 18px;
+  color: #94a3b8;
+  font-family: "Space Mono", monospace;
+  font-size: 12px;
+  text-align: center;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.seating-enchin-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+}
+
+/* Enchin pool buttons (if used elsewhere) */
+.seating-enchin-button {
+  position: relative;
+  padding: 12px 20px;
+  border: 3px solid #0f172a;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #60a5fa, #34d399);
+  color: #fff;
+  font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow:
+    0 6px 0 #0f172a,
+    0 10px 18px rgba(2, 6, 23, 0.35);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    opacity 0.18s ease,
+    filter 0.18s ease;
+  outline: none;
+  user-select: none;
+}
+
+.seating-enchin-button img,
+.seating-seat img {
+  display: block;
+  box-shadow: 0 2px 6px rgba(2, 6, 23, 0.35);
+}
+
+.seating-enchin-button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow:
+    0 9px 0 #0f172a,
+    0 14px 24px rgba(2, 6, 23, 0.45);
+  filter: brightness(1.03);
+}
+
+.seating-enchin-button:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow:
+    0 3px 0 #0f172a,
+    0 6px 12px rgba(2, 6, 23, 0.35);
+}
+
+.seating-enchin-button:focus-visible {
+  box-shadow:
+    0 6px 0 #0f172a,
+    0 0 0 3px #f43f5e,
+    0 10px 18px rgba(2, 6, 23, 0.35);
+}
+
+.seating-enchin-button.selected {
+  border-color: #f43f5e;
+  background: #f43f5e;
+  box-shadow:
+    0 8px 0 #0f172a,
+    0 14px 24px rgba(244, 63, 94, 0.35);
+  transform: translateY(-2px);
+}
+
+.seating-enchin-button.seated {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #475569, #334155);
+  box-shadow:
+    0 4px 0 #0f172a,
+    0 6px 12px rgba(2, 6, 23, 0.25);
+  transform: none;
+  filter: grayscale(0.15);
+}
+
+.seating-enchin-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #475569, #334155);
+  box-shadow:
+    0 4px 0 #0f172a,
+    0 6px 12px rgba(2, 6, 23, 0.25);
+  transform: none;
+  filter: grayscale(0.15);
+}
+
+/* Car shell */
+
+.seating-car {
+  position: relative;
+  padding: 0;
+  border: 3px solid #0f172a;
+  border-radius: 18px;
+  background: #0b1220;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 20px 40px rgba(2, 6, 23, 0.55);
+  overflow: hidden;
+
+  aspect-ratio: 2 / 1;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Media container: video stays on last frame */
+.seating-car-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 6, 23, 0.8);
+  border-radius: 18px;
+  pointer-events: none;
+}
+
+.seating-car-media video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: 18px;
+}
+
+/* Subtle “dashboard” highlight (optional) */
+.seating-car::before {
+  content: "";
+  position: absolute;
+  inset: -40% -10% auto -10%;
+  height: 60%;
+  background:
+    radial-gradient(ellipse at center,
+      rgba(255, 255, 255, 0.06),
+      transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Seat grid overlaid on top of car media */
+.seating-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-rows: repeat(2, 1fr);
+  gap: 18px;
+  padding: 26px;
+  pointer-events: none;
+}
+
+.seating-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  pointer-events: auto;
+}
+
+.seating-seat {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  cursor: default;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+  outline: none;
+  pointer-events: auto;
+}
+
+.seating-seat:hover {
+  background: transparent;
+}
+
+.seating-seat.ready {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.seating-seat.ready:hover {
+  background: transparent;
+  border-style: none;
+}
+
+.seating-seat.ready:focus-visible {
+  box-shadow: none;
+}
+
+.seating-seat.occupied {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.seating-seat.occupied:hover {
+  background: transparent;
+}
+
+.seating-seat.occupied:focus-visible {
+  box-shadow: none;
+}
+
+.seating-seat-label {
+  margin-bottom: 6px;
+  opacity: 0.8;
+  font-family: "Space Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #cbd5e1;
+  pointer-events: none;
+}
+
+.seating-seat-name {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.seating-seat.occupied .seating-seat-name {
+  color: #f8fafc;
+  text-shadow: 0 1px 0 rgba(2, 6, 23, 0.35);
+}
+
+/* Custom seat nudges to match your car image */
+
+/* Nudge Driver seat */
+.seating-seat[data-seat-id='seat1'] {
+  margin-top: 60px;
+  transform: translateX(-90px);
+}
+
+/* Nudge Passenger Princess seat */
+.seating-seat[data-seat-id='seat2'] {
+  margin-top: 10px;
+  transform: translateX(-90px);
+}
+
+/* Nudge Middle Left seat */
+.seating-seat[data-seat-id='seat3'] {
+  margin-top: 60px;
+}
+
+/* Nudge Middle Right seat */
+.seating-seat[data-seat-id='seat4'] {
+  margin-top: 10px;
+}
+
+/* Nudge Back Left seat */
+.seating-seat[data-seat-id='seat5'] {
+  margin-top: 60px;
+  transform: translateX(100px);
+}
+
+/* Nudge Back Right seat */
+.seating-seat[data-seat-id='seat6'] {
+  margin-top: 10px;
+  transform: translateX(100px);
+}
+
+/* Mobile */
+
+@media (max-width: 700px) {
+  .seating-content {
+    padding: 20px;
+  }
+
+  .seating-grid {
+    padding: 18px;
+    gap: 12px;
+  }
+
+  .seating-row {
+    gap: 12px;
+  }
+
+  .seating-seat {
+    min-height: 64px;
+  }
+
+  .seating-seat-label {
+    font-size: 9px;
+  }
+
+  .seating-seat-name {
+    font-size: 12px;
+  }
+
+  .seating-enchin-button {
+    padding: 10px 16px;
+    font-size: 12px;
+    box-shadow:
+      0 5px 0 #0f172a,
+      0 8px 16px rgba(2, 6, 23, 0.35);
+  }
+
+  .seating-enchin-button:hover:not(:disabled) {
+    box-shadow:
+      0 7px 0 #0f172a,
+      0 11px 18px rgba(2, 6, 23, 0.4);
+  }
+}
+
+@media (max-width: 480px) {
+  .seating-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

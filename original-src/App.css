@@ -1,0 +1,8 @@
+@import "./styles/globals.css";
+@import "./styles/animations.css";
+@import "./styles/intro.css";
+@import "./styles/story.css";
+@import "./styles/games.css";
+@import "./styles/ending.css";
+@import "./styles/stops.css";
+@import "./styles/responsive.css";
